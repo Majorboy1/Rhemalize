@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "653124289726",
+    "project_id": "rhemalize-church-audio-app",
+    "storage_bucket": "rhemalize-church-audio-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:653124289726:android:9192575c77ef8eaec70aef",
+        "android_client_info": {
+          "package_name": "com.rhemalize.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "653124289726-dqcq281rj0u0p3ocpc9vnhtdsb7ugj0u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rhemalize.app",
+            "certificate_hash": "b40956982e4f64878f77b51fcd268fdf9bd20f35"
+          }
+        },
+        {
+          "client_id": "653124289726-mma5hdf4i1ml661d7449be13p8endvh2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAKz0ylFfvI2Ts5sJC_2-xjgZXco0gxSCI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "653124289726-mma5hdf4i1ml661d7449be13p8endvh2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "653124289726-79u6ek1qo3rj0dnlm26n9u1hmu6h78be.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.rhemalizeChurchAudioAppV2"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

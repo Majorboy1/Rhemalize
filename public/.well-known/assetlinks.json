@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.rhemalize.app",
+    "sha256_cert_fingerprints": ["7A:03:D1:D6:FA:AB:10:04:5F:D5:6C:2F:43:61:5A:92:10:39:EE:50:95:5A:50:A8:16:08:24:E2:05:A9:07:46"]
+  }
+}]

@@ -1,0 +1,78 @@
+name: rhemalize
+description: A church audio sermon app
+publish_to: "none"
+version: 1.0.0+1
+  
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  
+dependencies:
+  # Add this line here:
+  flutter:
+    sdk: flutter
+  just_audio_background: ^0.0.1-beta.17
+
+  # State Management
+  provider: ^6.1.1
+
+  # Audio & Session
+  just_audio: ^0.10.5
+  audio_session: ^0.2.2
+
+  # Firebase - Use these compatible versions
+  firebase_core: ^3.10.1
+  firebase_auth: ^5.4.0
+  cloud_firestore: ^5.6.0
+  firebase_storage: ^12.3.0
+  firebase_messaging: ^15.2.0
+  google_sign_in: ^6.2.1  # Stay on 6.2.1
+
+  # UI & Utilities
+  shared_preferences: ^2.3.5
+  image_picker: ^1.1.2
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  lucide_icons: ^0.257.0
+  intl: ^0.20.2
+  share_plus: ^12.0.1
+  url_launcher: ^6.2.2
+  animations: ^2.0.11
+  http: ^1.1.2
+  cupertino_icons: ^1.0.6
+  uuid: ^4.5.3
+  app_links: ^7.0.0
+  connectivity_plus: ^7.0.0
+  file_picker: ^10.3.10
+ 
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/rhema-logo.png
+    - assets/images/picture-1.png
+    - assets/images/picture-2.png
+    - assets/images/picture-3.png
+    - assets/images/picture-4.png
+    - assets/images/choir.jpg
+    - assets/images/bro_wisdom.jpg
+    - assets/images/crowd.jpg
+    - assets/images/ma_judith.png
+    - assets/images/millenium.jpg
+    - assets/images/pst&wife.jpg
+    - assets/images/usher.jpg
+    - assets/images/sis_peace.jpg
+    - assets/images/soul_winners.jpg
+    - assets/images/pst_ministering.jpg
+    - assets/images/pst_ministering_2.png
+    - assets/images/bro_dave.jpg
+    - assets/images/esther.jpg
+    - assets/audio/
