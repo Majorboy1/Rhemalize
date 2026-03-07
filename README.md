@@ -1,4 +1,4 @@
-# rhemalize_church_audio_app_v2
+# rhemalize_church_audio_app
 
 A new Flutter project.
 
