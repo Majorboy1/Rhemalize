@@ -24,7 +24,6 @@ class SeriesDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Determine if we are in Dark Mode to adjust background colors
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final List<Episode> episodes = series.episodes;
 
@@ -64,7 +63,22 @@ class SeriesDetailPage extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 8),
+                // NEW: Series Description Section
+                if (series.description != null &&
+                    series.description!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    series.description!,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Text(
@@ -153,7 +167,6 @@ class SeriesDetailPage extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Episode Number Badge
               Container(
                 width: 38,
                 height: 38,
@@ -223,7 +236,6 @@ class SeriesDetailPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              // Play/Check Icon
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Icon(
