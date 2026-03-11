@@ -5,6 +5,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:audio_session/audio_session.dart'; // Added for professional session handling
 import '../models/sermon.dart';
 import '../services/audio_service.dart';
 
@@ -31,6 +32,10 @@ class AudioProvider with ChangeNotifier {
   static const String _playedKey = 'played_sermon_ids';
   static const String _lastListenKey = 'last_listen_date';
 
+  // Fallback image for notifications if sermon art is missing
+  static const String _fallbackArt =
+      "https://rhemalize-church-audio-app.web.app/assets/icon.png";
+
   PlaybackDataDelegate? dataDelegate;
   PlaybackSession? _session;
 
@@ -54,7 +59,11 @@ class AudioProvider with ChangeNotifier {
     _loadPlayedHistory();
   }
 
-  void _configureAudioEngine() {
+  Future<void> _configureAudioEngine() async {
+    // --- SUGGESTION ADDED: Configure Audio Session for Background & WakeLock ---
+    final session = await AudioSession.instance;
+    await session.configure(const AudioSessionConfiguration.music());
+
     _audioService.player
         .setAudioSource(ConcatenatingAudioSource(children: []), preload: true);
   }
@@ -92,7 +101,6 @@ class AudioProvider with ChangeNotifier {
     _audioService.player.playerStateStream.listen((state) async {
       _isPlaying = state.playing;
 
-      // Improved buffering logic
       _isBuffering = state.processingState == ProcessingState.buffering ||
           state.processingState == ProcessingState.loading;
 
@@ -266,7 +274,11 @@ class AudioProvider with ChangeNotifier {
                     album: s.seriesTitle ?? "Single",
                     title: s.title,
                     artist: s.speaker,
-                    artUri: Uri.parse(s.imageUrl ?? "")),
+                    // --- SUGGESTION ADDED: ArtUri safety fallback ---
+                    artUri: Uri.parse(
+                        (s.imageUrl != null && s.imageUrl!.isNotEmpty)
+                            ? s.imageUrl!
+                            : _fallbackArt)),
               ))
           .toList(),
     );
@@ -300,7 +312,11 @@ class AudioProvider with ChangeNotifier {
                     album: series.title,
                     title: e.title,
                     artist: e.speaker,
-                    artUri: Uri.parse(e.imageUrl ?? series.imageUrl ?? "")),
+                    // --- SUGGESTION ADDED: ArtUri safety fallback ---
+                    artUri: Uri.parse(
+                        (e.imageUrl != null && e.imageUrl!.isNotEmpty)
+                            ? e.imageUrl!
+                            : (series.imageUrl ?? _fallbackArt))),
               ))
           .toList(),
     );
@@ -332,7 +348,7 @@ class AudioProvider with ChangeNotifier {
       await _audioService.play();
     } catch (e) {
       debugPrint("Audio Play Error: $e");
-      _isBuffering = false; // Reset if it fails to load
+      _isBuffering = false;
       notifyListeners();
     } finally {
       _isBuffering = false;
@@ -348,11 +364,10 @@ class AudioProvider with ChangeNotifier {
   void playNext() => _audioService.player.seekToNext();
   void playPrevious() => _audioService.player.seekToPrevious();
 
-  /// FIXED: Now properly clears Episode state and buffering to prevent UI hangs
   void stop() {
     _audioService.stop();
     _currentSermon = null;
-    _currentEpisode = null; // Essential fix for Series
+    _currentEpisode = null;
     _session = null;
     _isBuffering = false;
     _isPlaying = false;
