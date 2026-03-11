@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   just_audio_background: ^0.0.1-beta.17
+  flutter_local_notifications: ^17.0.0
 
   # State Management
   provider: ^6.1.1
