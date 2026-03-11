@@ -25,7 +25,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Correctly defining providers at the top of the build method
     final sermonProvider = context.watch<SermonProvider>();
     final audioProvider = context.watch<AudioProvider>();
     final favoritesProvider = context.watch<FavoritesProvider>();
@@ -52,20 +51,24 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.primaryPurple,
       body: Stack(
         children: [
-          // Pass authProvider here to fix the "Undefined name" error
+          // Header Background and Info
           _buildHeader(authProvider, sermons, isDark),
+
+          // Main Content Panel
           Padding(
-            padding: const EdgeInsets.only(top: 260),
+            padding: const EdgeInsets.only(
+                top: 220), // Adjusted to give the header room to breathe
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
                 color: Theme.of(context).scaffoldBackgroundColor,
                 borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(32),
-                    topRight: Radius.circular(32)),
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
+                ),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -142,7 +145,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = authProvider.user;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
+      // Reduced top and bottom padding to fit the header within the available space
+      padding: const EdgeInsets.fromLTRB(24, 50, 24, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -168,36 +172,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ClipOval(
                   child: user?.photoURL != null
                       ? Image.network(
-                          // We use standard photoURL, but ensure it handles errors
                           user!.photoURL!,
                           fit: BoxFit.cover,
                           width: 44,
                           height: 44,
-                          // Shows a loading spinner while the Gmail photo is downloading
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
-                            return const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            );
+                            return const CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white);
                           },
-                          // This runs if the Gmail link is broken or network is down
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Icon(Icons.person,
-                                color: Colors.white54);
-                          },
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.person, color: Colors.white54),
                         )
                       : const Icon(Icons.person, color: Colors.white54),
                 ),
               )
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           Row(
             children: [
               _statCard('$sundayCount', 'Sunday Messages'),
@@ -213,18 +205,18 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _statCard(String value, String label) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.12),
             borderRadius: BorderRadius.circular(16)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(value,
               style: const TextStyle(
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: Colors.white)),
           Text(label,
-              style: const TextStyle(color: Colors.white70, fontSize: 12)),
+              style: const TextStyle(color: Colors.white70, fontSize: 11)),
         ]),
       ),
     );
@@ -294,4 +286,20 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+class HeaderClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.lineTo(0, size.height - 40);
+    path.quadraticBezierTo(
+        size.width * 0.5, size.height + 10, size.width, size.height - 40);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> old) => false;
 }

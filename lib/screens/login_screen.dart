@@ -28,18 +28,13 @@ class _LoginScreenState extends State<LoginScreen>
   int _currentImageIndex = 0;
 
   final List<String> _backgroundImages = [
+    'assets/images/picture-4.png',
     'assets/images/pst&wife.jpg',
     'assets/images/ma_judith.png',
     'assets/images/bro_dave.jpg',
     'assets/images/sis_peace.jpg',
     'assets/images/bro_wisdom.jpg',
     'assets/images/esther.jpg',
-    'assets/images/millenium.jpg',
-    'assets/images/choir.jpg',
-    'assets/images/usher.jpg',
-    'assets/images/soul_winners.jpg',
-    'assets/images/pst_ministering.jpg',
-    'assets/images/crowd.jpg',
   ];
 
   @override

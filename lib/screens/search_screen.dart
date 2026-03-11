@@ -79,7 +79,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildModernHeader(bool isDark) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 84, 20, 24),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF161616) : Colors.white,
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
