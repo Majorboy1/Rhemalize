@@ -7,7 +7,7 @@ import '../providers/auth_provider.dart';
 import '../utils/app_colors.dart';
 import '../widgets/sermon_card.dart';
 import '../models/sermon.dart';
-import '../screens/series_detail_screen.dart';
+import '../screens/series_detail_screen.dart'; // Ensure this matches your filename
 
 enum FilterCategory { all, sunday, wednesday }
 
@@ -26,9 +26,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final sermonProvider = context.watch<SermonProvider>();
-    final audioProvider = context.watch<AudioProvider>();
     final favoritesProvider = context.watch<FavoritesProvider>();
-    final authProvider = context.watch<AuthProvider>();
+    final authProvider = context.read<AuthProvider>();
+
+    // Optimized selector to prevent unnecessary rebuilds during audio playback
+    final playedIds = context
+        .select<AudioProvider, Set<String>>((pro) => pro.playedSermonIds);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sermons = sermonProvider.sermons;
@@ -51,13 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.primaryPurple,
       body: Stack(
         children: [
-          // Header Background and Info
           _buildHeader(authProvider, sermons, isDark),
-
-          // Main Content Panel
           Padding(
-            padding: const EdgeInsets.only(
-                top: 220), // Adjusted to give the header room to breathe
+            padding: const EdgeInsets.only(top: 220),
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -87,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 12),
                     Expanded(
                       child: ListView.separated(
-                        padding: const EdgeInsets.only(bottom: 120),
+                        padding: const EdgeInsets.only(bottom: 100),
                         itemCount: filteredSermons.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 16),
                         itemBuilder: (context, index) {
@@ -95,31 +94,28 @@ class _HomeScreenState extends State<HomeScreen> {
                           return SermonCard(
                             sermon: sermon,
                             isFavorite: favoritesProvider.isFavorite(sermon.id),
-                            isPlayed: audioProvider.playedSermonIds
-                                .contains(sermon.id),
+                            isPlayed: playedIds.contains(sermon.id),
                             onToggleFavorite: () =>
                                 favoritesProvider.toggleFavorite(sermon.id),
                             onPlay: () {
+                              final audioPro = context.read<AudioProvider>();
                               if (sermon.messageType == MessageType.series) {
                                 Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => SeriesDetailPage(
-                                              series: sermon,
-                                              onBack: () =>
-                                                  Navigator.pop(context),
-                                              onPlayEpisode: (ep) =>
-                                                  audioProvider.playEpisode(
-                                                      sermon,
-                                                      ep,
-                                                      filteredSermons,
-                                                      PlaybackContext.home),
-                                              playedSermons:
-                                                  audioProvider.playedSermonIds,
-                                            )));
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SeriesDetailPage(
+                                      series: sermon,
+                                      allSermons:
+                                          sermons, // FIXED: Added required argument
+                                      onBack: () => Navigator.pop(context),
+                                      playedSermons: playedIds,
+                                      // FIXED: Removed undefined onPlayEpisode parameter
+                                    ),
+                                  ),
+                                );
                               } else {
-                                audioProvider.playSermon(sermon,
-                                    filteredSermons, PlaybackContext.home);
+                                audioPro.playSermon(sermon, filteredSermons,
+                                    PlaybackContext.home);
                               }
                             },
                           );
@@ -136,6 +132,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // --- UI Helper Methods ---
+
   Widget _buildHeader(
       AuthProvider authProvider, List<Sermon> sermons, bool isDark) {
     final sundayCount =
@@ -145,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = authProvider.user;
 
     return Container(
-      // Reduced top and bottom padding to fit the header within the available space
       padding: const EdgeInsets.fromLTRB(24, 50, 24, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -166,24 +163,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               CircleAvatar(
-                key: ValueKey(user?.photoURL),
                 radius: 22,
                 backgroundColor: Colors.white24,
                 child: ClipOval(
                   child: user?.photoURL != null
-                      ? Image.network(
-                          user!.photoURL!,
+                      ? Image.network(user!.photoURL!,
                           fit: BoxFit.cover,
                           width: 44,
                           height: 44,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white);
-                          },
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.person, color: Colors.white54),
-                        )
+                          errorBuilder: (c, e, s) =>
+                              const Icon(Icons.person, color: Colors.white54))
                       : const Icon(Icons.person, color: Colors.white54),
                 ),
               )
@@ -286,20 +275,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-}
-
-class HeaderClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    Path path = Path();
-    path.lineTo(0, size.height - 40);
-    path.quadraticBezierTo(
-        size.width * 0.5, size.height + 10, size.width, size.height - 40);
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> old) => false;
 }

@@ -32,6 +32,7 @@ class FavoritesProvider with ChangeNotifier {
     return _favoriteIds.contains(id);
   }
 
+  // UPDATED: Optimistic UI for instant feedback
   Future<bool> toggleFavorite(String id) async {
     final user = _auth.currentUser;
     if (user == null) return false;
@@ -40,20 +41,36 @@ class FavoritesProvider with ChangeNotifier {
     bool added;
 
     if (_favoriteIds.contains(id)) {
-      _favoriteIds.remove(id);
+      _favoriteIds.remove(id); // Remove locally first
       added = false;
-      notifyListeners();
-      await userDoc.update({
-        'favorites': FieldValue.arrayRemove([id])
-      });
     } else {
-      _favoriteIds.add(id);
+      _favoriteIds.add(id); // Add locally first
       added = true;
-      notifyListeners();
-      await userDoc.set({
-        'favorites': FieldValue.arrayUnion([id])
-      }, SetOptions(merge: true));
     }
+
+    // Notify UI immediately before the network call
+    notifyListeners();
+
+    try {
+      if (added) {
+        await userDoc.set({
+          'favorites': FieldValue.arrayUnion([id])
+        }, SetOptions(merge: true));
+      } else {
+        await userDoc.update({
+          'favorites': FieldValue.arrayRemove([id])
+        });
+      }
+    } catch (e) {
+      // Rollback on error if network fails
+      if (added)
+        _favoriteIds.remove(id);
+      else
+        _favoriteIds.add(id);
+      notifyListeners();
+      debugPrint("Favorite Sync Error: $e");
+    }
+
     return added;
   }
 
@@ -76,11 +93,9 @@ class FavoritesProvider with ChangeNotifier {
   List<Sermon> get favoriteSermons {
     List<Sermon> favorites = [];
     for (var sermon in _allSermons) {
-      // Add standard sermons
       if (_favoriteIds.contains(sermon.id)) {
         favorites.add(sermon);
       }
-      // Add episodes from series
       for (var episode in sermon.episodes) {
         if (_favoriteIds.contains(episode.id)) {
           favorites.add(Sermon(
@@ -95,7 +110,7 @@ class FavoritesProvider with ChangeNotifier {
             duration: episode.duration,
             messageType: MessageType.single,
             episodes: [],
-            seriesTitle: sermon.title, // Critical for UI display
+            seriesTitle: sermon.title,
           ));
         }
       }

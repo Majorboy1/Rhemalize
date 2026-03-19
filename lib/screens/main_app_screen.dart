@@ -1,4 +1,3 @@
-// lib/screens/main_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/audio_provider.dart';
@@ -16,6 +15,7 @@ import 'full_player_screen.dart';
 import '../widgets/custom_bottom_nav.dart';
 import '../widgets/mini_player.dart';
 import '../utils/app_colors.dart';
+import '../utils/player_transitions.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -31,24 +31,38 @@ class _MainAppState extends State<MainApp> {
   @override
   void initState() {
     super.initState();
-    // Listen for changes in the AudioProvider to trigger the Full Screen Player automatically
+    // Use a microtask to attach the listener after the first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AudioProvider>().addListener(_handleAudioStateChange);
+      if (mounted) {
+        context.read<AudioProvider>().addListener(_handleAudioStateChange);
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    // Clean up listener to prevent memory leaks or late-initialization errors
+    try {
+      context.read<AudioProvider>().removeListener(_handleAudioStateChange);
+    } catch (_) {}
+    super.dispose();
   }
 
   void _handleAudioStateChange() {
     if (!mounted) return;
     final audioProvider = context.read<AudioProvider>();
 
-    // If the provider signals to show the full player and it isn't already open
+    // Optimization: Only trigger modal if provider specifically flags it
+    // and we aren't already showing it.
     if (audioProvider.showFullPlayer && !_isPlayerModalOpen) {
-      Future.microtask(() => _showFullScreenPlayer());
+      _showFullScreenPlayer();
     }
   }
 
   void _onTabChange(BottomTab tab) {
-    setState(() => _activeTab = tab);
+    if (_activeTab != tab) {
+      setState(() => _activeTab = tab);
+    }
   }
 
   Future<void> _showFullScreenPlayer() async {
@@ -56,28 +70,29 @@ class _MainAppState extends State<MainApp> {
 
     setState(() => _isPlayerModalOpen = true);
 
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      useRootNavigator: true,
-      builder: (context) => const FullScreenPlayer(),
+    await Navigator.of(context).push(
+      PlayerTransition.slideUpRoute(const FullScreenPlayer()),
     );
 
     if (mounted) {
       setState(() => _isPlayerModalOpen = false);
-      // Reset the flag in provider so it can be triggered again later
       context.read<AudioProvider>().closeFullPlayer();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // watching the providers ensures the UI rebuilds when state changes
-    final audioProvider = context.watch<AudioProvider>();
-    final sermonProvider = context.watch<SermonProvider>();
-    final favoritesProvider = context.watch<FavoritesProvider>();
-    final authProvider = context.watch<AuthProvider>();
+    // --- CRITICAL OPTIMIZATION ---
+    // Using context.select ensures this build() ONLY runs when the active audio status changes.
+    // This prevents the screen from freezing/stuttering while audio is buffering.
+    final bool hasActiveAudio = context.select<AudioProvider, bool>(
+        (pro) => pro.currentSermon != null || pro.currentEpisode != null);
+
+    // We use .read() for these because their internal state changes (like sermon lists)
+    // are handled by the sub-screens (HomeScreen, etc.), not the MainApp shell.
+    final authProvider = context.read<AuthProvider>();
+    final sermonProvider = context.read<SermonProvider>();
+    final favoritesProvider = context.read<FavoritesProvider>();
 
     // Determine which screen to show based on the active tab
     Widget currentScreen;
@@ -107,11 +122,6 @@ class _MainAppState extends State<MainApp> {
         break;
     }
 
-    // This Boolean is the "Key" to showing/hiding the player.
-    // It is true only if a sermon or episode is actually loaded.
-    final bool hasActiveAudio = audioProvider.currentSermon != null ||
-        audioProvider.currentEpisode != null;
-
     return Scaffold(
       body: Column(
         children: [
@@ -121,7 +131,7 @@ class _MainAppState extends State<MainApp> {
                 // The main page content
                 currentScreen,
 
-                // --- 3D SPINNING LOGO BADGE (Static Overlay) ---
+                // --- 3D SPINNING LOGO BADGE ---
                 Positioned(
                   top: MediaQuery.of(context).padding.top + 10,
                   left: 20,
@@ -132,26 +142,27 @@ class _MainAppState extends State<MainApp> {
           ),
 
           // --- MINI PLAYER LOGIC ---
-          // If there is audio and the full player isn't covering the screen, show the MiniPlayer
+          // Using a Consumer here localized to just the MiniPlayer prevents the
+          // whole screen from rebuilding every second for the progress bar.
           if (hasActiveAudio && !_isPlayerModalOpen)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: MiniPlayer(
-                sermon: audioProvider.currentSermon,
-                episode: audioProvider.currentEpisode,
-                isPlaying: audioProvider.isPlaying,
-                currentTime: audioProvider.position.inSeconds.toDouble(),
-                duration: audioProvider.duration.inSeconds.toDouble(),
-                onPlayPause: () => audioProvider.togglePlayPause(),
-                onExpand: _showFullScreenPlayer,
-                onClose: () {
-                  // This calls stop() in your provider, which sets currentSermon to null
-                  // and triggers a rebuild, effectively removing this widget.
-                  audioProvider.stop();
-                },
-                onSkipForward: () => audioProvider.playNext(),
-                onSkipBack: () => audioProvider.playPrevious(),
-              ),
+            Consumer<AudioProvider>(
+              builder: (context, audioPro, _) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                  child: MiniPlayer(
+                    sermon: audioPro.currentSermon,
+                    episode: audioPro.currentEpisode,
+                    isPlaying: audioPro.isPlaying,
+                    currentTime: audioPro.position.inSeconds.toDouble(),
+                    duration: audioPro.duration.inSeconds.toDouble(),
+                    onPlayPause: () => audioPro.togglePlayPause(),
+                    onExpand: _showFullScreenPlayer,
+                    onClose: () => audioPro.stop(),
+                    onSkipForward: () => audioPro.playNext(),
+                    onSkipBack: () => audioPro.playPrevious(),
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -163,7 +174,7 @@ class _MainAppState extends State<MainApp> {
   }
 }
 
-// --- SPINNING LOGO COMPONENT ---
+// --- SPINNING LOGO COMPONENT (Keep as is) ---
 class SpinningRhemaLogo extends StatefulWidget {
   const SpinningRhemaLogo({super.key});
 
@@ -198,8 +209,8 @@ class _SpinningRhemaLogoState extends State<SpinningRhemaLogo>
         return Transform(
           alignment: Alignment.center,
           transform: Matrix4.identity()
-            ..setEntry(3, 2, 0.002) // Perspective for 3D depth
-            ..rotateY(_controller.value * 2 * 3.14159), // Full Y-axis rotation
+            ..setEntry(3, 2, 0.002)
+            ..rotateY(_controller.value * 2 * 3.14159),
           child: child,
         );
       },

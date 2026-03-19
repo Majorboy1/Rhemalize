@@ -5,7 +5,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:audio_session/audio_session.dart'; // Added for professional session handling
+import 'package:audio_session/audio_session.dart';
 import '../models/sermon.dart';
 import '../services/audio_service.dart';
 
@@ -29,10 +29,10 @@ class PlaybackSession {
 class AudioProvider with ChangeNotifier {
   final AudioService _audioService = AudioService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   static const String _playedKey = 'played_sermon_ids';
   static const String _lastListenKey = 'last_listen_date';
-
-  // Fallback image for notifications if sermon art is missing
+  static const String _positionPrefix = 'resume_pos_';
   static const String _fallbackArt =
       "https://rhemalize-church-audio-app.web.app/assets/icon.png";
 
@@ -52,20 +52,18 @@ class AudioProvider with ChangeNotifier {
 
   final Set<String> _playedIds = {};
   DateTime _lastListenDate = DateTime.now();
+  String? _lastTrackId;
+  Timer? _positionSaveTimer; // Timer for background position saving
 
   AudioProvider() {
-    _configureAudioEngine();
+    _initAudio();
     _listenToStates();
     _loadPlayedHistory();
   }
 
-  Future<void> _configureAudioEngine() async {
-    // --- SUGGESTION ADDED: Configure Audio Session for Background & WakeLock ---
+  Future<void> _initAudio() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
-
-    _audioService.player
-        .setAudioSource(ConcatenatingAudioSource(children: []), preload: true);
   }
 
   // ================= GETTERS =================
@@ -100,11 +98,20 @@ class AudioProvider with ChangeNotifier {
 
     _audioService.player.playerStateStream.listen((state) async {
       _isPlaying = state.playing;
-
       _isBuffering = state.processingState == ProcessingState.buffering ||
           state.processingState == ProcessingState.loading;
 
+      if (state.playing) {
+        _startPositionTracking();
+      } else {
+        _stopPositionTracking();
+      }
+
       if (state.processingState == ProcessingState.completed) {
+        // Clear saved position when finished
+        final id = _currentEpisode?.id ?? _currentSermon?.id;
+        if (id != null) _clearSavedPosition(id);
+
         if (_loopMode == LoopMode.off && !hasNext) {
           await _handleTrackEnded();
         }
@@ -113,7 +120,7 @@ class AudioProvider with ChangeNotifier {
     });
 
     _audioService.player.currentIndexStream.listen((index) {
-      _syncMetadata();
+      _syncMetadata(index);
     });
 
     _audioService.player.speedStream.listen((s) {
@@ -122,8 +129,7 @@ class AudioProvider with ChangeNotifier {
     });
   }
 
-  void _syncMetadata() {
-    final index = _audioService.player.currentIndex;
+  void _syncMetadata(int? index) {
     if (index != null && _session != null) {
       if (_session!.type == ContentType.series && _currentSermon != null) {
         if (index < _currentSermon!.episodes.length) {
@@ -142,7 +148,44 @@ class AudioProvider with ChangeNotifier {
     }
   }
 
+  // ================= PERSISTENCE LOGIC =================
+
+  void _startPositionTracking() {
+    _positionSaveTimer?.cancel();
+    _positionSaveTimer =
+        Timer.periodic(const Duration(seconds: 5), (timer) async {
+      final id = _currentEpisode?.id ?? _currentSermon?.id;
+      if (id != null && _isPlaying && _position.inSeconds > 0) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('$_positionPrefix$id', _position.inMilliseconds);
+      }
+    });
+  }
+
+  void _stopPositionTracking() {
+    _positionSaveTimer?.cancel();
+  }
+
+  Future<void> _clearSavedPosition(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_positionPrefix$id');
+  }
+
   // ================= STREAK & FIRESTORE LOGIC =================
+
+  void _handleNewPlay(String id,
+      {bool isEpisode = false, String? parentSermonId}) {
+    if (_lastTrackId == id) return;
+    _lastTrackId = id;
+
+    if (!_playedIds.contains(id)) {
+      _playedIds.add(id);
+      _savePlayedHistory();
+      _updateLastListenDate();
+      _updateStreakInFirestore();
+    }
+    _recordListenToFirestore(id, isEpisode, parentSermonId: parentSermonId);
+  }
 
   Future<void> _updateStreakInFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -150,78 +193,84 @@ class AudioProvider with ChangeNotifier {
     final userRef = _firestore.collection('users').doc(user.uid);
 
     try {
-      final doc = await userRef.get();
-      if (!doc.exists) return;
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(userRef);
+        if (!snapshot.exists) return;
 
-      final data = doc.data() as Map<String, dynamic>;
-      final DateTime now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
+        final data = snapshot.data() as Map<String, dynamic>;
+        final DateTime now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
 
-      DateTime lastDate = today;
-      if (data['lastListenDate'] != null) {
-        lastDate = (data['lastListenDate'] as Timestamp).toDate();
-      }
-      final lastListen = DateTime(lastDate.year, lastDate.month, lastDate.day);
+        DateTime lastDate = today;
+        if (data['lastListenDate'] != null) {
+          lastDate = (data['lastListenDate'] as Timestamp).toDate();
+        }
+        final lastListen =
+            DateTime(lastDate.year, lastDate.month, lastDate.day);
 
-      final int currentStreak = data['streak'] ?? 0;
-      final difference = today.difference(lastListen).inDays;
+        final int currentStreak = data['streak'] ?? 0;
+        final difference = today.difference(lastListen).inDays;
 
-      if (difference == 1) {
-        await userRef.update({
-          'streak': FieldValue.increment(1),
-          'lastListenDate': Timestamp.fromDate(today),
-        });
-      } else if (difference > 1 || currentStreak == 0) {
-        await userRef.update({
-          'streak': 1,
-          'lastListenDate': Timestamp.fromDate(today),
-        });
-      }
+        if (difference == 1) {
+          transaction.update(userRef, {
+            'streak': FieldValue.increment(1),
+            'lastListenDate': Timestamp.fromDate(today),
+          });
+        } else if (difference > 1 || currentStreak == 0) {
+          transaction.update(userRef, {
+            'streak': 1,
+            'lastListenDate': Timestamp.fromDate(today),
+          });
+        }
+      });
     } catch (e) {
-      debugPrint("Streak Update Error: $e");
+      debugPrint("Streak Transaction Error: $e");
     }
   }
 
-  Future<void> _recordListenToFirestore(String id, bool isEpisode,
-      {String? parentSermonId}) async {
-    try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
+  void _recordListenToFirestore(String id, bool isEpisode,
+      {String? parentSermonId}) {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
 
-      await _firestore.collection('listens').add({
-        'contentId': id,
-        'parentSermonId': parentSermonId,
-        'userId': userId,
-        'timestamp': FieldValue.serverTimestamp(),
-        'isEpisode': isEpisode,
-      });
+    unawaited(_firestore.collection('listens').add({
+      'contentId': id,
+      'parentSermonId': parentSermonId,
+      'userId': userId,
+      'timestamp': FieldValue.serverTimestamp(),
+      'isEpisode': isEpisode,
+    }));
 
-      final sermonId = isEpisode ? parentSermonId : id;
-      if (sermonId != null) {
-        DocumentReference sermonRef =
-            _firestore.collection('sermons').doc(sermonId);
+    final sermonId = isEpisode ? parentSermonId : id;
+    if (sermonId == null) return;
 
-        if (!isEpisode) {
-          await sermonRef.update({'playCount': FieldValue.increment(1)});
-        } else {
-          final doc = await sermonRef.get();
-          if (doc.exists) {
-            List<dynamic> episodes = doc.get('episodes') ?? [];
-            for (var e in episodes) {
-              if (e['id'] == id) {
-                e['playCount'] = (e['playCount'] ?? 0) + 1;
-                break;
-              }
-            }
-            await sermonRef.update({
-              'playCount': FieldValue.increment(1),
-              'episodes': episodes,
-            });
+    DocumentReference sermonRef =
+        _firestore.collection('sermons').doc(sermonId);
+
+    _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(sermonRef);
+      if (!snapshot.exists) return;
+
+      if (!isEpisode) {
+        transaction.update(sermonRef, {'playCount': FieldValue.increment(1)});
+      } else {
+        List<dynamic> episodes = List.from(snapshot.get('episodes') ?? []);
+        bool found = false;
+        for (var e in episodes) {
+          if (e['id'] == id) {
+            e['playCount'] = (e['playCount'] ?? 0) + 1;
+            found = true;
+            break;
           }
         }
+        if (found) {
+          transaction.update(sermonRef, {
+            'playCount': FieldValue.increment(1),
+            'episodes': episodes,
+          });
+        }
       }
-    } catch (e) {
-      debugPrint("Error recording listen: $e");
-    }
+    }).catchError((e) => debugPrint("PlayCount Transaction Error: $e"));
   }
 
   // ================= CONTROLS =================
@@ -235,13 +284,11 @@ class AudioProvider with ChangeNotifier {
   }
 
   void cycleSpeed() {
-    if (_speed == 1.0) {
-      _speed = 1.5;
-    } else if (_speed == 1.5) {
-      _speed = 2.0;
-    } else {
-      _speed = 1.0;
-    }
+    _speed = (_speed == 1.0)
+        ? 1.5
+        : (_speed == 1.5)
+            ? 2.0
+            : 1.0;
     _audioService.player.setSpeed(_speed);
     notifyListeners();
   }
@@ -264,31 +311,24 @@ class AudioProvider with ChangeNotifier {
     _currentSermon = sermon;
     _currentEpisode = null;
 
-    final playlist = ConcatenatingAudioSource(
-      children: _session!.originalList
-          .where((s) => s.audioUrl.isNotEmpty)
-          .map((s) => AudioSource.uri(
-                Uri.parse(_convertToDirectLink(s.audioUrl)),
-                tag: MediaItem(
-                    id: s.id,
-                    album: s.seriesTitle ?? "Single",
-                    title: s.title,
-                    artist: s.speaker,
-                    // --- SUGGESTION ADDED: ArtUri safety fallback ---
-                    artUri: Uri.parse(
-                        (s.imageUrl != null && s.imageUrl!.isNotEmpty)
-                            ? s.imageUrl!
-                            : _fallbackArt)),
-              ))
-          .toList(),
-    );
+    final children = _session!.originalList
+        .where((s) => s.audioUrl.isNotEmpty)
+        .map((s) => AudioSource.uri(
+              Uri.parse(_convertToDirectLink(s.audioUrl)),
+              tag: MediaItem(
+                  id: s.id,
+                  album: s.seriesTitle ?? "Rhemalize",
+                  title: s.title,
+                  artist: s.speaker,
+                  artUri: Uri.parse(
+                      (s.imageUrl != null && s.imageUrl!.isNotEmpty)
+                          ? s.imageUrl!
+                          : _fallbackArt)),
+            ))
+        .toList();
 
     int index = _session!.originalList.indexWhere((s) => s.id == sermon.id);
-    _executePlay(
-        id: sermon.id,
-        playlist: playlist,
-        initialIndex: index >= 0 ? index : 0,
-        isEpisode: false);
+    _executePlay(playlist: children, initialIndex: index >= 0 ? index : 0);
   }
 
   void playEpisode(Sermon series, Episode episode, List<Sermon> currentList,
@@ -302,76 +342,107 @@ class AudioProvider with ChangeNotifier {
     _currentSermon = series;
     _currentEpisode = episode;
 
-    final playlist = ConcatenatingAudioSource(
-      children: series.episodes
-          .where((e) => e.audioUrl.isNotEmpty)
-          .map((e) => AudioSource.uri(
-                Uri.parse(_convertToDirectLink(e.audioUrl)),
-                tag: MediaItem(
-                    id: e.id,
-                    album: series.title,
-                    title: e.title,
-                    artist: e.speaker,
-                    // --- SUGGESTION ADDED: ArtUri safety fallback ---
-                    artUri: Uri.parse(
-                        (e.imageUrl != null && e.imageUrl!.isNotEmpty)
-                            ? e.imageUrl!
-                            : (series.imageUrl ?? _fallbackArt))),
-              ))
-          .toList(),
-    );
+    final children = series.episodes
+        .where((e) => e.audioUrl.isNotEmpty)
+        .map((e) => AudioSource.uri(
+              Uri.parse(_convertToDirectLink(e.audioUrl)),
+              tag: MediaItem(
+                  id: e.id,
+                  album: series.title,
+                  title: e.title,
+                  artist: e.speaker,
+                  artUri: Uri.parse(
+                      (e.imageUrl != null && e.imageUrl!.isNotEmpty)
+                          ? e.imageUrl!
+                          : (series.imageUrl ?? _fallbackArt))),
+            ))
+        .toList();
 
     int index = series.episodes.indexWhere((e) => e.id == episode.id);
-    _executePlay(
-        id: episode.id,
-        playlist: playlist,
-        initialIndex: index >= 0 ? index : 0,
-        isEpisode: true,
-        parentSermonId: series.id);
+    _executePlay(playlist: children, initialIndex: index >= 0 ? index : 0);
   }
 
-  Future<void> _executePlay(
-      {required String id,
-      required ConcatenatingAudioSource playlist,
-      required int initialIndex,
-      required bool isEpisode,
-      String? parentSermonId}) async {
-    _handleNewPlay(id, isEpisode: isEpisode, parentSermonId: parentSermonId);
+  Future<void> _executePlay({
+    required List<AudioSource> playlist,
+    required int initialIndex,
+    BuildContext? context, // Added context to show the SnackBar
+  }) async {
     _showFullPlayer = true;
     _isBuffering = true;
     notifyListeners();
 
     try {
-      await _audioService.player
-          .setAudioSource(playlist, initialIndex: initialIndex);
+      await _audioService.player.stop();
+
+      // 1. Check for saved position
+      final id = _currentEpisode?.id ?? _currentSermon?.id;
+      final prefs = await SharedPreferences.getInstance();
+      final savedMs = prefs.getInt('$_positionPrefix$id') ?? 0;
+      final initialPosition = Duration(milliseconds: savedMs);
+
+      final source = ConcatenatingAudioSource(children: playlist);
+      final safeIndex = (initialIndex >= 0 && initialIndex < playlist.length)
+          ? initialIndex
+          : 0;
+
+      // 2. Start from beginning initially
+      await _audioService.player.setAudioSource(
+        source,
+        initialIndex: safeIndex,
+        initialPosition: Duration.zero,
+      );
+
       await _audioService.player.setSpeed(_speed);
       await _audioService.play();
+
+      // 3. If they have significant progress (more than 10s), offer to resume
+      if (savedMs > 10000 && context != null && context.mounted) {
+        _showResumeSnackBar(context, initialPosition);
+      }
     } catch (e) {
       debugPrint("Audio Play Error: $e");
-      _isBuffering = false;
-      notifyListeners();
     } finally {
       _isBuffering = false;
       notifyListeners();
     }
   }
 
-  void togglePlayPause() {
-    if (_currentSermon == null && _currentEpisode == null) return;
-    _isPlaying ? _audioService.pause() : _audioService.play();
+  void _showResumeSnackBar(BuildContext context, Duration position) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            "Continue from ${position.toString().split('.').first.padLeft(8, "0").substring(2)}?"),
+        duration: const Duration(seconds: 6),
+        action: SnackBarAction(
+          label: "RESUME",
+          onPressed: () => seek(position),
+        ),
+      ),
+    );
   }
 
+  void togglePlayPause() =>
+      _isPlaying ? _audioService.pause() : _audioService.play();
   void playNext() => _audioService.player.seekToNext();
   void playPrevious() => _audioService.player.seekToPrevious();
 
   void stop() {
+    _stopPositionTracking();
     _audioService.stop();
     _currentSermon = null;
     _currentEpisode = null;
     _session = null;
     _isBuffering = false;
     _isPlaying = false;
+    _lastTrackId = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _stopPositionTracking();
+    super.dispose();
   }
 
   void toggleShuffle() {
@@ -381,13 +452,12 @@ class AudioProvider with ChangeNotifier {
   }
 
   void toggleLoopMode() {
-    if (_loopMode == LoopMode.off) {
+    if (_loopMode == LoopMode.off)
       _loopMode = LoopMode.one;
-    } else if (_loopMode == LoopMode.one) {
+    else if (_loopMode == LoopMode.one)
       _loopMode = LoopMode.all;
-    } else {
+    else
       _loopMode = LoopMode.off;
-    }
     _audioService.player.setLoopMode(_loopMode);
     notifyListeners();
   }
@@ -399,17 +469,6 @@ class AudioProvider with ChangeNotifier {
     return match != null
         ? 'https://drive.google.com/uc?export=download&id=${match.group(1)}'
         : url;
-  }
-
-  void _handleNewPlay(String id,
-      {bool isEpisode = false, String? parentSermonId}) {
-    if (!_playedIds.contains(id)) {
-      _playedIds.add(id);
-      _savePlayedHistory();
-      _updateLastListenDate();
-      _updateStreakInFirestore();
-    }
-    _recordListenToFirestore(id, isEpisode, parentSermonId: parentSermonId);
   }
 
   Future<void> _updateLastListenDate() async {

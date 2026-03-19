@@ -121,17 +121,21 @@ void main() async {
     cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
   );
 
-  await PushNotificationService.initialize();
-
+  // Make sure this 'await' is present!
   try {
     await JustAudioBackground.init(
       androidNotificationChannelId: 'com.rhemalize.app.audio',
       androidNotificationChannelName: 'Rhemalize Audio Playback',
       androidNotificationOngoing: true,
+      androidShowNotificationBadge: true,
     );
+    debugPrint("Audio service initialized successfully");
   } catch (e) {
-    debugPrint("Audio init skip: $e");
+    debugPrint("Audio service initialization failed: $e");
   }
+
+  // 4. Push Notifications
+  await PushNotificationService.initialize();
 
   runApp(const RhemalizeApp());
 }

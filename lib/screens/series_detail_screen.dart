@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/sermon.dart';
+import '../providers/audio_provider.dart';
 import '../widgets/pastor_badge.dart';
 import '../utils/app_colors.dart';
 
 class SeriesDetailPage extends StatelessWidget {
   final Sermon series;
   final VoidCallback onBack;
-  final void Function(Episode episode) onPlayEpisode;
+  final List<Sermon>
+      allSermons; // Added to pass the full context to the provider
   final Set<String> playedSermons;
   final bool isLoading;
 
@@ -15,7 +18,7 @@ class SeriesDetailPage extends StatelessWidget {
     super.key,
     required this.series,
     required this.onBack,
-    required this.onPlayEpisode,
+    required this.allSermons,
     required this.playedSermons,
     this.isLoading = false,
   });
@@ -63,7 +66,6 @@ class SeriesDetailPage extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                // NEW: Series Description Section
                 if (series.description != null &&
                     series.description!.isNotEmpty) ...[
                   const SizedBox(height: 8),
@@ -123,8 +125,14 @@ class SeriesDetailPage extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final episode = episodes[index];
                           final isPlayed = playedSermons.contains(episode.id);
-                          return _buildEpisodeItem(
-                              context, episode, isPlayed, index + 1, isDark);
+
+                          // Use context.watch to rebuild when the current track changes
+                          final audioProv = context.watch<AudioProvider>();
+                          final bool isCurrentlyPlaying =
+                              audioProv.currentEpisode?.id == episode.id;
+
+                          return _buildEpisodeItem(context, episode, isPlayed,
+                              isCurrentlyPlaying, index + 1, isDark);
                         },
                       ),
           ),
@@ -133,35 +141,29 @@ class SeriesDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildSkeletonList(bool isDark) {
-    return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey.shade900 : Colors.grey.shade200,
-      highlightColor: isDark ? Colors.grey.shade800 : Colors.white,
-      child: ListView.separated(
-        padding: const EdgeInsets.all(20),
-        itemCount: 6,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (_, __) => Container(
-          height: 90,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildEpisodeItem(BuildContext context, Episode episode, bool isPlayed,
-      int episodeNumber, bool isDark) {
+      bool isCurrentlyPlaying, int episodeNumber, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : AppColors.gray50,
+        color: isCurrentlyPlaying
+            ? AppColors.primaryPurple.withOpacity(0.1) // Highlight if playing
+            : (isDark ? Colors.white.withOpacity(0.05) : AppColors.gray50),
         borderRadius: BorderRadius.circular(16),
+        border: isCurrentlyPlaying
+            ? Border.all(color: AppColors.primaryPurple.withOpacity(0.3))
+            : null,
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => onPlayEpisode(episode),
+        onTap: () {
+          // CALL UPDATED PROVIDER METHOD
+          context.read<AudioProvider>().playEpisode(
+                series,
+                episode,
+                allSermons,
+                PlaybackContext.library,
+              );
+        },
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
@@ -171,19 +173,24 @@ class SeriesDetailPage extends StatelessWidget {
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.black26 : Colors.white,
+                  color: isCurrentlyPlaying
+                      ? AppColors.primaryPurple
+                      : (isDark ? Colors.black26 : Colors.white),
                   border: Border.all(
                       color: AppColors.primaryPurple.withOpacity(0.1)),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: Text(
-                    episodeNumber.toString(),
-                    style: const TextStyle(
-                        color: AppColors.primaryPurple,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14),
-                  ),
+                  child: isCurrentlyPlaying
+                      ? const Icon(Icons.bar_chart,
+                          color: Colors.white, size: 20) // Animated-style icon
+                      : Text(
+                          episodeNumber.toString(),
+                          style: const TextStyle(
+                              color: AppColors.primaryPurple,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14),
+                        ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -196,7 +203,9 @@ class SeriesDetailPage extends StatelessWidget {
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
-                          color: isDark ? Colors.white : Colors.black87),
+                          color: isCurrentlyPlaying
+                              ? AppColors.primaryPurple
+                              : (isDark ? Colors.white : Colors.black87)),
                     ),
                     const SizedBox(height: 4),
                     Row(
@@ -239,12 +248,37 @@ class SeriesDetailPage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Icon(
-                  isPlayed ? Icons.check_circle : Icons.play_circle_fill,
-                  color: isPlayed ? Colors.green : AppColors.primaryPurple,
-                  size: 30,
+                  isCurrentlyPlaying
+                      ? Icons.pause_circle_filled
+                      : (isPlayed
+                          ? Icons.check_circle
+                          : Icons.play_circle_fill),
+                  color: isCurrentlyPlaying
+                      ? AppColors.primaryPurple
+                      : (isPlayed ? Colors.green : AppColors.primaryPurple),
+                  size: 32,
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonList(bool isDark) {
+    return Shimmer.fromColors(
+      baseColor: isDark ? Colors.grey.shade900 : Colors.grey.shade200,
+      highlightColor: isDark ? Colors.grey.shade800 : Colors.white,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(20),
+        itemCount: 6,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (_, __) => Container(
+          height: 90,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),

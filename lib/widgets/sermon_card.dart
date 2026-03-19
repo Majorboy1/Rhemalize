@@ -82,6 +82,7 @@ Check out this powerful word here: $shareLink
                         onPressed: _shareSermon,
                       ),
 
+                      // Inside SermonCard's build method...
                       if (onToggleFavorite != null)
                         IconButton(
                           constraints: const BoxConstraints(),
@@ -92,7 +93,20 @@ Check out this powerful word here: $shareLink
                                 isFavorite ? Colors.red : Colors.grey.shade400,
                             size: 22,
                           ),
-                          onPressed: onToggleFavorite,
+                          onPressed: () {
+                            onToggleFavorite!();
+                            // Added instant snackbar feedback
+                            ScaffoldMessenger.of(context).clearSnackBars();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(isFavorite
+                                    ? 'Removed from Favorites'
+                                    : 'Added to Favorites'),
+                                duration: const Duration(milliseconds: 800),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          },
                         ),
                     ],
                   ),
