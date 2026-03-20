@@ -13,7 +13,7 @@
         android:icon="@mipmap/ic_launcher">
         
         <activity
-            android:name="com.ryanheise.audioservice.AudioServiceActivity"
+            android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
@@ -31,7 +31,7 @@
             </intent-filter>
         </activity>
 
-        <service android:name="com.ryanheise.just_audio_background.AudioHandlerService"
+        <service android:name="com.ryanheise.audioservice.AudioService"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback"
             tools:ignore="Instantiatable">
@@ -40,7 +40,7 @@
             </intent-filter>
         </service>
 
-        <receiver android:name="com.ryanheise.just_audio_background.MediaButtonReceiver"
+        <receiver android:name="com.ryanheise.audioservice.MediaButtonReceiver"
             android:exported="true"
             tools:ignore="Instantiatable">
             <intent-filter>

@@ -49,6 +49,7 @@ class AudioProvider with ChangeNotifier {
   bool _isShuffleOn = false;
   LoopMode _loopMode = LoopMode.off;
   double _speed = 1.0;
+  String? _lastError;
 
   final Set<String> _playedIds = {};
   DateTime _lastListenDate = DateTime.now();
@@ -79,6 +80,7 @@ class AudioProvider with ChangeNotifier {
   bool get isShuffleOn => _isShuffleOn;
   LoopMode get loopMode => _loopMode;
   double get speed => _speed;
+  String? get lastError => _lastError;
   bool get hasNext => _audioService.player.hasNext;
   bool get hasPrevious => _audioService.player.hasPrevious;
   PlaybackSession? get playbackSession => _session;
@@ -295,12 +297,18 @@ class AudioProvider with ChangeNotifier {
 
   void playSermon(
       Sermon sermon, List<Sermon> currentList, PlaybackContext context) {
-    if (sermon.audioUrl.isEmpty && sermon.messageType == MessageType.single)
+    if (sermon.audioUrl.isEmpty && sermon.messageType == MessageType.single) {
       return;
+    }
 
     if (sermon.messageType == MessageType.series &&
         sermon.episodes.isNotEmpty) {
-      playEpisode(sermon, sermon.episodes.first, currentList, context);
+      final playableEpisodes =
+          sermon.episodes.where((e) => e.audioUrl.isNotEmpty).toList();
+      if (playableEpisodes.isEmpty) {
+        return;
+      }
+      playEpisode(sermon, playableEpisodes.first, currentList, context);
       return;
     }
 
@@ -311,8 +319,14 @@ class AudioProvider with ChangeNotifier {
     _currentSermon = sermon;
     _currentEpisode = null;
 
-    final children = _session!.originalList
+    final playableSermons = _session!.originalList
         .where((s) => s.audioUrl.isNotEmpty)
+        .toList();
+    if (playableSermons.isEmpty) {
+      return;
+    }
+
+    final children = playableSermons
         .map((s) => AudioSource.uri(
               Uri.parse(_convertToDirectLink(s.audioUrl)),
               tag: MediaItem(
@@ -327,13 +341,15 @@ class AudioProvider with ChangeNotifier {
             ))
         .toList();
 
-    int index = _session!.originalList.indexWhere((s) => s.id == sermon.id);
+    final int index = playableSermons.indexWhere((s) => s.id == sermon.id);
     _executePlay(playlist: children, initialIndex: index >= 0 ? index : 0);
   }
 
   void playEpisode(Sermon series, Episode episode, List<Sermon> currentList,
       PlaybackContext context) {
-    if (episode.audioUrl.isEmpty) return;
+    if (episode.audioUrl.isEmpty) {
+      return;
+    }
 
     _session = PlaybackSession(
         context: context,
@@ -342,8 +358,13 @@ class AudioProvider with ChangeNotifier {
     _currentSermon = series;
     _currentEpisode = episode;
 
-    final children = series.episodes
-        .where((e) => e.audioUrl.isNotEmpty)
+    final playableEpisodes =
+        series.episodes.where((e) => e.audioUrl.isNotEmpty).toList();
+    if (playableEpisodes.isEmpty) {
+      return;
+    }
+
+    final children = playableEpisodes
         .map((e) => AudioSource.uri(
               Uri.parse(_convertToDirectLink(e.audioUrl)),
               tag: MediaItem(
@@ -358,7 +379,7 @@ class AudioProvider with ChangeNotifier {
             ))
         .toList();
 
-    int index = series.episodes.indexWhere((e) => e.id == episode.id);
+    final int index = playableEpisodes.indexWhere((e) => e.id == episode.id);
     _executePlay(playlist: children, initialIndex: index >= 0 ? index : 0);
   }
 
@@ -369,6 +390,7 @@ class AudioProvider with ChangeNotifier {
   }) async {
     _showFullPlayer = true;
     _isBuffering = true;
+    _lastError = null;
     notifyListeners();
 
     try {
@@ -400,6 +422,7 @@ class AudioProvider with ChangeNotifier {
         _showResumeSnackBar(context, initialPosition);
       }
     } catch (e) {
+      _lastError = e.toString();
       debugPrint("Audio Play Error: $e");
     } finally {
       _isBuffering = false;
