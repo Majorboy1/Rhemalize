@@ -31,8 +31,10 @@ class AudioProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   static const String _playedKey = 'played_sermon_ids';
+  static const String _playedOrderKey = 'played_sermon_order';
   static const String _lastListenKey = 'last_listen_date';
   static const String _positionPrefix = 'resume_pos_';
+  static const String _lastResumeKey = 'last_resume_id';
   static const String _fallbackArt =
       "https://rhemalize-church-audio-app.web.app/assets/icon.png";
 
@@ -52,7 +54,10 @@ class AudioProvider with ChangeNotifier {
   String? _lastError;
 
   final Set<String> _playedIds = {};
+  final List<String> _playedOrder = [];
+  final Map<String, int> _resumePositions = {};
   DateTime _lastListenDate = DateTime.now();
+  String? _lastResumableId;
   String? _lastTrackId;
   Timer? _positionSaveTimer; // Timer for background position saving
 
@@ -76,11 +81,15 @@ class AudioProvider with ChangeNotifier {
   Duration get duration => _duration;
   bool get showFullPlayer => _showFullPlayer;
   Set<String> get playedSermonIds => _playedIds;
+  List<String> get recentPlayedIds => List.unmodifiable(_playedOrder);
   DateTime get lastListenDate => _lastListenDate;
+  String? get lastResumableId => _lastResumableId;
   bool get isShuffleOn => _isShuffleOn;
   LoopMode get loopMode => _loopMode;
   double get speed => _speed;
   String? get lastError => _lastError;
+  Duration getSavedPosition(String id) =>
+      Duration(milliseconds: _resumePositions[id] ?? 0);
   bool get hasNext => _audioService.player.hasNext;
   bool get hasPrevious => _audioService.player.hasPrevious;
   PlaybackSession? get playbackSession => _session;
@@ -180,11 +189,16 @@ class AudioProvider with ChangeNotifier {
     if (_lastTrackId == id) return;
     _lastTrackId = id;
 
+    _playedOrder.remove(id);
+    _playedOrder.insert(0, id);
+
     if (!_playedIds.contains(id)) {
       _playedIds.add(id);
       _savePlayedHistory();
       _updateLastListenDate();
       _updateStreakInFirestore();
+    } else {
+      _savePlayedHistory();
     }
     _recordListenToFirestore(id, isEpisode, parentSermonId: parentSermonId);
   }
@@ -272,7 +286,9 @@ class AudioProvider with ChangeNotifier {
           });
         }
       }
-    }).catchError((e) => debugPrint("PlayCount Transaction Error: $e"));
+    }).catchError((e) {
+      debugPrint("PlayCount Transaction Error: $e");
+    });
   }
 
   // ================= CONTROLS =================
@@ -296,7 +312,8 @@ class AudioProvider with ChangeNotifier {
   }
 
   void playSermon(
-      Sermon sermon, List<Sermon> currentList, PlaybackContext context) {
+      Sermon sermon, List<Sermon> currentList, PlaybackContext context,
+      {bool resumeFromSavedPosition = false}) {
     if (sermon.audioUrl.isEmpty && sermon.messageType == MessageType.single) {
       return;
     }
@@ -308,7 +325,8 @@ class AudioProvider with ChangeNotifier {
       if (playableEpisodes.isEmpty) {
         return;
       }
-      playEpisode(sermon, playableEpisodes.first, currentList, context);
+      playEpisode(sermon, playableEpisodes.first, currentList, context,
+          resumeFromSavedPosition: resumeFromSavedPosition);
       return;
     }
 
@@ -342,11 +360,16 @@ class AudioProvider with ChangeNotifier {
         .toList();
 
     final int index = playableSermons.indexWhere((s) => s.id == sermon.id);
-    _executePlay(playlist: children, initialIndex: index >= 0 ? index : 0);
+    _executePlay(
+      playlist: children,
+      initialIndex: index >= 0 ? index : 0,
+      resumeFromSavedPosition: resumeFromSavedPosition,
+    );
   }
 
   void playEpisode(Sermon series, Episode episode, List<Sermon> currentList,
-      PlaybackContext context) {
+      PlaybackContext context,
+      {bool resumeFromSavedPosition = false}) {
     if (episode.audioUrl.isEmpty) {
       return;
     }
@@ -380,13 +403,18 @@ class AudioProvider with ChangeNotifier {
         .toList();
 
     final int index = playableEpisodes.indexWhere((e) => e.id == episode.id);
-    _executePlay(playlist: children, initialIndex: index >= 0 ? index : 0);
+    _executePlay(
+      playlist: children,
+      initialIndex: index >= 0 ? index : 0,
+      resumeFromSavedPosition: resumeFromSavedPosition,
+    );
   }
 
   Future<void> _executePlay({
     required List<AudioSource> playlist,
     required int initialIndex,
     BuildContext? context, // Added context to show the SnackBar
+    bool resumeFromSavedPosition = false,
   }) async {
     _showFullPlayer = true;
     _isBuffering = true;
@@ -411,14 +439,18 @@ class AudioProvider with ChangeNotifier {
       await _audioService.player.setAudioSource(
         source,
         initialIndex: safeIndex,
-        initialPosition: Duration.zero,
+        initialPosition:
+            resumeFromSavedPosition ? initialPosition : Duration.zero,
       );
 
       await _audioService.player.setSpeed(_speed);
       await _audioService.play();
 
       // 3. If they have significant progress (more than 10s), offer to resume
-      if (savedMs > 10000 && context != null && context.mounted) {
+      if (!resumeFromSavedPosition &&
+          savedMs > 10000 &&
+          context != null &&
+          context.mounted) {
         _showResumeSnackBar(context, initialPosition);
       }
     } catch (e) {
@@ -504,21 +536,43 @@ class AudioProvider with ChangeNotifier {
   Future<void> _loadPlayedHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final List<String>? savedIds = prefs.getStringList(_playedKey);
+    final List<String>? savedOrder = prefs.getStringList(_playedOrderKey);
     if (savedIds != null) _playedIds.addAll(savedIds);
+    if (savedOrder != null && savedOrder.isNotEmpty) {
+      _playedOrder.addAll(savedOrder);
+    } else if (savedIds != null) {
+      _playedOrder.addAll(savedIds);
+    }
+    for (final id in _playedOrder) {
+      final savedMs = prefs.getInt('');
+      if (savedMs != null && savedMs > 0) {
+        _resumePositions[id] = savedMs;
+      }
+    }
     final String? dateStr = prefs.getString(_lastListenKey);
     if (dateStr != null) _lastListenDate = DateTime.parse(dateStr);
+    _lastResumableId = prefs.getString(_lastResumeKey);
     notifyListeners();
   }
 
   Future<void> _savePlayedHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_playedKey, _playedIds.toList());
+    await prefs.setStringList(_playedOrderKey, _playedOrder);
   }
 
   Future<void> clearPlayedHistory() async {
     _playedIds.clear();
+    _playedOrder.clear();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_playedKey);
+    await prefs.remove(_playedOrderKey);
+    notifyListeners();
+  }
+
+  void clearLastError() {
+    if (_lastError == null) return;
+    _lastError = null;
     notifyListeners();
   }
 

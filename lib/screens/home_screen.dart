@@ -27,14 +27,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final sermonProvider = context.watch<SermonProvider>();
     final favoritesProvider = context.watch<FavoritesProvider>();
+    final audioProvider = context.watch<AudioProvider>();
     final authProvider = context.read<AuthProvider>();
-
-    // Optimized selector to prevent unnecessary rebuilds during audio playback
-    final playedIds = context
-        .select<AudioProvider, Set<String>>((pro) => pro.playedSermonIds);
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sermons = sermonProvider.sermons;
+    final playedIds = audioProvider.playedSermonIds;
+    final resumeTarget =
+        _findResumeTarget(sermons, audioProvider.lastResumableId);
+    final resumePosition = resumeTarget == null
+        ? Duration.zero
+        : audioProvider.getSavedPosition(resumeTarget.contentId);
 
     final filteredSermons = sermons.where((s) {
       bool catMatch = _selectedCategory == FilterCategory.all ||
@@ -71,6 +74,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (audioProvider.lastError != null) ...[
+                      _buildPlaybackErrorCard(audioProvider),
+                      const SizedBox(height: 16),
+                    ],
+                    if (resumeTarget != null &&
+                        resumePosition > const Duration(seconds: 10)) ...[
+                      _buildContinueListeningCard(
+                        resumeTarget,
+                        resumePosition,
+                        sermons,
+                        audioProvider,
+                      ),
+                      const SizedBox(height: 20),
+                    ],
                     _buildFilters(sermons, isDark),
                     const SizedBox(height: 24),
                     Row(
@@ -134,6 +151,194 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // --- UI Helper Methods ---
 
+  Widget _buildPlaybackErrorCard(AudioProvider audioProvider) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4F4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFCACA)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.error_outline_rounded,
+              color: Colors.redAccent, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Playback Problem',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  audioProvider.lastError ?? 'Unknown playback error',
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: audioProvider.clearLastError,
+            icon: const Icon(Icons.close_rounded),
+            splashRadius: 18,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContinueListeningCard(
+    _ResumeTarget target,
+    Duration position,
+    List<Sermon> allSermons,
+    AudioProvider audioProvider,
+  ) {
+    final progressText = _formatPosition(position);
+    final imageUrl = target.imageUrl;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () {
+        if (target.episode != null) {
+          audioProvider.playEpisode(
+            target.sermon,
+            target.episode!,
+            allSermons,
+            PlaybackContext.home,
+            resumeFromSavedPosition: true,
+          );
+        } else {
+          audioProvider.playSermon(
+            target.sermon,
+            allSermons,
+            PlaybackContext.home,
+            resumeFromSavedPosition: true,
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF32175E), Color(0xFF513B8F)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF32175E).withOpacity(0.24),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(16),
+                image: imageUrl != null && imageUrl.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(imageUrl),
+                        fit: BoxFit.cover,
+                      )
+                    : null,
+              ),
+              child: imageUrl == null || imageUrl.isEmpty
+                  ? const Icon(Icons.play_circle_fill_rounded,
+                      color: Colors.white, size: 30)
+                  : null,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Continue Listening',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    target.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${target.subtitle} • $progressText',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  _ResumeTarget? _findResumeTarget(List<Sermon> sermons, String? contentId) {
+    if (contentId == null || contentId.isEmpty) return null;
+
+    for (final sermon in sermons) {
+      if (sermon.id == contentId) {
+        return _ResumeTarget(
+          contentId: sermon.id,
+          sermon: sermon,
+          title: sermon.title,
+          subtitle: sermon.speaker,
+          imageUrl: sermon.imageUrl,
+        );
+      }
+
+      for (final episode in sermon.episodes) {
+        if (episode.id == contentId) {
+          return _ResumeTarget(
+            contentId: episode.id,
+            sermon: sermon,
+            episode: episode,
+            title: episode.title,
+            subtitle: '${sermon.title} • ${episode.speaker}',
+            imageUrl: episode.imageUrl ?? sermon.imageUrl,
+          );
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String _formatPosition(Duration position) {
+    final hours = position.inHours;
+    final minutes = position.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = position.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
   Widget _buildHeader(
       AuthProvider authProvider, List<Sermon> sermons, bool isDark) {
     final sundayCount =
@@ -300,4 +505,21 @@ class _StaticRhemaLogo extends StatelessWidget {
       ),
     );
   }
+}
+class _ResumeTarget {
+  const _ResumeTarget({
+    required this.contentId,
+    required this.sermon,
+    required this.title,
+    required this.subtitle,
+    this.episode,
+    this.imageUrl,
+  });
+
+  final String contentId;
+  final Sermon sermon;
+  final Episode? episode;
+  final String title;
+  final String subtitle;
+  final String? imageUrl;
 }
