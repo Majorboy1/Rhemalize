@@ -140,7 +140,6 @@ class _HomeScreenState extends State<HomeScreen> {
         sermons.where((s) => s.category == SermonCategory.sunday).length;
     final wednesdayCount =
         sermons.where((s) => s.category == SermonCategory.wednesday).length;
-    final user = authProvider.user;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 50, 24, 0),
@@ -148,34 +147,24 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Rhemalize',
-                      style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
-                  Text('Hear God’s Word Today',
-                      style: TextStyle(color: Colors.white.withOpacity(0.7))),
-                ],
-              ),
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: Colors.white24,
-                child: ClipOval(
-                  child: user?.photoURL != null
-                      ? Image.network(user!.photoURL!,
-                          fit: BoxFit.cover,
-                          width: 44,
-                          height: 44,
-                          errorBuilder: (c, e, s) =>
-                              const Icon(Icons.person, color: Colors.white54))
-                      : const Icon(Icons.person, color: Colors.white54),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Rhemalize',
+                        style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                    Text("Hear God's Word Today",
+                        style: TextStyle(color: Colors.white.withOpacity(0.7))),
+                  ],
                 ),
-              )
+              ),
+              const SizedBox(width: 12),
+              const _StaticRhemaLogo(size: 42, innerPadding: 7),
             ],
           ),
           const SizedBox(height: 20),
@@ -272,6 +261,42 @@ class _HomeScreenState extends State<HomeScreen> {
                         : (isDark ? Colors.white70 : AppColors.primaryPurple))),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _StaticRhemaLogo extends StatelessWidget {
+  const _StaticRhemaLogo({
+    required this.size,
+    required this.innerPadding,
+  });
+
+  final double size;
+  final double innerPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: size,
+      width: size,
+      padding: EdgeInsets.all(innerPadding),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 12,
+            spreadRadius: 2,
+          )
+        ],
+      ),
+      child: Image.asset(
+        'assets/images/rhema-logo.png',
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) =>
+            const Icon(Icons.auto_awesome, color: Colors.amber, size: 28),
       ),
     );
   }

@@ -14,7 +14,6 @@ import 'full_player_screen.dart';
 
 import '../widgets/custom_bottom_nav.dart';
 import '../widgets/mini_player.dart';
-import '../utils/app_colors.dart';
 import '../utils/player_transitions.dart';
 
 class MainApp extends StatefulWidget {
@@ -132,11 +131,13 @@ class _MainAppState extends State<MainApp> {
                 currentScreen,
 
                 // --- 3D SPINNING LOGO BADGE ---
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + 10,
-                  left: 20,
-                  child: const SpinningRhemaLogo(),
-                ),
+                if (_activeTab != BottomTab.home)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 18,
+                    left: _activeTab == BottomTab.favorites ? null : 8,
+                    right: _activeTab == BottomTab.favorites ? 12 : null,
+                    child: const SpinningRhemaLogo(size: 36, innerPadding: 6),
+                  ),
               ],
             ),
           ),
@@ -176,7 +177,14 @@ class _MainAppState extends State<MainApp> {
 
 // --- SPINNING LOGO COMPONENT (Keep as is) ---
 class SpinningRhemaLogo extends StatefulWidget {
-  const SpinningRhemaLogo({super.key});
+  const SpinningRhemaLogo({
+    super.key,
+    this.size = 48,
+    this.innerPadding = 8,
+  });
+
+  final double size;
+  final double innerPadding;
 
   @override
   State<SpinningRhemaLogo> createState() => _SpinningRhemaLogoState();
@@ -219,11 +227,11 @@ class _SpinningRhemaLogoState extends State<SpinningRhemaLogo>
         width: 48,
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 12,
               spreadRadius: 2,
             )
