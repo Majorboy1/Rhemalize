@@ -1,11 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"> <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    xmlns:tools="http://schemas.android.com/tools"> 
+    
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     
- <application
+    <application
         android:label="Rhemalize"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
@@ -18,6 +20,10 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
+            
+            <meta-data
+                android:name="flutterEmbedding"
+                android:value="2" />
             
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
