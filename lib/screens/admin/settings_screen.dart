@@ -98,10 +98,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _handleLogout(BuildContext context) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final navigator = Navigator.of(context);
     await auth.signOut();
-    if (mounted) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-    }
+    if (!mounted) return;
+    navigator.pushNamedAndRemoveUntil('/login', (route) => false);
   }
 
   Widget _buildSectionTitle(String title) => Padding(
@@ -139,8 +139,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
       trailing: Icon(icon, color: color, size: 20),
       onTap: () {
-        // Implement logic for export/backup
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(' is not wired yet.')),
+        );
       },
     );
   }
 }
+
+

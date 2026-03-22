@@ -430,14 +430,13 @@ class AudioProvider with ChangeNotifier {
       final savedMs = prefs.getInt('$_positionPrefix$id') ?? 0;
       final initialPosition = Duration(milliseconds: savedMs);
 
-      final source = ConcatenatingAudioSource(children: playlist);
       final safeIndex = (initialIndex >= 0 && initialIndex < playlist.length)
           ? initialIndex
           : 0;
 
       // 2. Start from beginning initially
-      await _audioService.player.setAudioSource(
-        source,
+      await _audioService.player.setAudioSources(
+        playlist,
         initialIndex: safeIndex,
         initialPosition:
             resumeFromSavedPosition ? initialPosition : Duration.zero,
@@ -507,12 +506,13 @@ class AudioProvider with ChangeNotifier {
   }
 
   void toggleLoopMode() {
-    if (_loopMode == LoopMode.off)
+    if (_loopMode == LoopMode.off) {
       _loopMode = LoopMode.one;
-    else if (_loopMode == LoopMode.one)
+    } else if (_loopMode == LoopMode.one) {
       _loopMode = LoopMode.all;
-    else
+    } else {
       _loopMode = LoopMode.off;
+    }
     _audioService.player.setLoopMode(_loopMode);
     notifyListeners();
   }
@@ -590,10 +590,12 @@ class AudioProvider with ChangeNotifier {
     if (_session != null && dataDelegate != null && _currentSermon != null) {
       final next = dataDelegate!.getNextContextItem(_currentSermon!.id,
           _session!.context, _session!.type, _session!.originalList);
-      if (next != null)
+      if (next != null) {
         playSermon(next, _session!.originalList, _session!.context);
-      else
+      } else {
         stop();
+      }
     }
   }
 }
+

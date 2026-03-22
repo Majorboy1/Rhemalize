@@ -4,8 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart'; // Switched to AuthProvider for consistency
-import '../../models/sermon.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/app_colors.dart';
 
 class AddSingleSermonModal extends StatefulWidget {
@@ -19,11 +18,11 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
 
-  String _selectedSpeaker = "Pastor Bright Elliot";
-  String _selectedCategory = "sunday";
+  String _selectedSpeaker = 'Pastor Bright Elliot';
+  String _selectedCategory = 'sunday';
 
   File? _selectedAudioFile;
-  Uint8List? _webAudioBytes; // Added for Web Support
+  Uint8List? _webAudioBytes;
   String? _selectedFileName;
 
   bool _isUploading = false;
@@ -36,7 +35,7 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
 
     if (_titleController.text.isEmpty || !hasAudio) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Title and Audio file are required")),
+        const SnackBar(content: Text('Title and Audio file are required')),
       );
       return;
     }
@@ -47,31 +46,32 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
     });
 
     try {
-      // Using AuthProvider's uploadOneTimeSermon to match your other screens
       await context.read<AuthProvider>().uploadOneTimeSermon(
             title: _titleController.text.trim(),
             pastor: _selectedSpeaker,
             description: _descController.text.trim(),
             audioFile: _selectedAudioFile,
             audioBytes: _webAudioBytes,
-            imageUrl: "https://via.placeholder.com/150", // Default placeholder
+            imageUrl: 'https://via.placeholder.com/150',
             category: _selectedCategory,
             onProgress: (p) => setState(() => _uploadProgress = p),
           );
 
+      if (!mounted) return;
       setState(() => _isSuccess = true);
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isUploading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Upload failed: $e")),
+        SnackBar(content: Text('Upload failed: $e')),
       );
     }
   }
 
   Future<void> _pickAudio() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.platform.pickFiles(
       type: FileType.audio,
-      withData: true, // Required for web and progress tracking
+      withData: true,
     );
 
     if (result != null) {
@@ -96,13 +96,15 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
 
     return Container(
       padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 20,
-          left: 24,
-          right: 24),
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        top: 20,
+        left: 24,
+        right: 24,
+      ),
       decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30))),
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+      ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -117,20 +119,20 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
                       borderRadius: BorderRadius.circular(10))),
             ),
             const SizedBox(height: 20),
-            Text("New Single Message",
+            Text('New Single Message',
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : Colors.black)),
             const SizedBox(height: 25),
-            _buildSectionLabel("MESSAGE DETAILS"),
-            _buildField(_titleController, "Message Title", Icons.title, isDark),
+            _buildSectionLabel('MESSAGE DETAILS'),
+            _buildField(_titleController, 'Message Title', Icons.title, isDark),
             const SizedBox(height: 10),
-            _buildSectionLabel("SPEAKER & CATEGORY"),
+            _buildSectionLabel('SPEAKER & CATEGORY'),
             _buildDropdowns(isDark),
             const SizedBox(height: 20),
-            _buildSectionLabel("DESCRIPTION"),
-            _buildField(_descController, "What is this message about?",
+            _buildSectionLabel('DESCRIPTION'),
+            _buildField(_descController, 'What is this message about?',
                 Icons.notes, isDark,
                 maxLines: 2),
             const SizedBox(height: 10),
@@ -144,8 +146,6 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
     );
   }
 
-  // --- UI Helper Methods (Kept for Style Consistency) ---
-
   Widget _buildSectionLabel(String label) => Padding(
         padding: const EdgeInsets.only(bottom: 8, left: 4),
         child: Text(label,
@@ -157,24 +157,42 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
       );
 
   Widget _buildDropdowns(bool isDark) {
-    return Row(
-      children: [
-        Expanded(
-            child: _buildSimpleDropdown(
-                ["Pastor Bright Elliot", "Pastor Judith Elliot"],
-                _selectedSpeaker,
-                (v) => setState(() => _selectedSpeaker = v!),
-                isDark,
-                "Speaker")),
-        const SizedBox(width: 12),
-        Expanded(
-            child: _buildSimpleDropdown(
-                ["sunday", "wednesday"],
-                _selectedCategory,
-                (v) => setState(() => _selectedCategory = v!),
-                isDark,
-                "Category")),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool useColumn = constraints.maxWidth < 430;
+        final speaker = _buildSimpleDropdown(
+          ['Pastor Bright Elliot', 'Ma Judith Elliot'],
+          _selectedSpeaker,
+          (v) => setState(() => _selectedSpeaker = v!),
+          isDark,
+          'Speaker',
+        );
+        final category = _buildSimpleDropdown(
+          ['sunday', 'wednesday'],
+          _selectedCategory,
+          (v) => setState(() => _selectedCategory = v!),
+          isDark,
+          'Category',
+        );
+
+        if (useColumn) {
+          return Column(
+            children: [
+              speaker,
+              const SizedBox(height: 12),
+              category,
+            ],
+          );
+        }
+
+        return Row(
+          children: [
+            Expanded(child: speaker),
+            const SizedBox(width: 12),
+            Expanded(child: category),
+          ],
+        );
+      },
     );
   }
 
@@ -204,30 +222,38 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
   Widget _buildSimpleDropdown(List<String> items, String value,
       Function(String?) onChanged, bool isDark, String label) {
     return DropdownButtonFormField<String>(
+      isExpanded: true,
       value: value,
       dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
       decoration: InputDecoration(
-          filled: true,
-          fillColor:
-              isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF7F8FA),
-          border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide.none)),
+        labelText: label,
+        filled: true,
+        fillColor:
+            isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF7F8FA),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(15),
+            borderSide: BorderSide.none),
+      ),
       items: items
           .map((e) => DropdownMenuItem(
-              value: e,
-              child: Text(e.toUpperCase(),
+                value: e,
+                child: Text(
+                  e,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : Colors.black))))
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+              ))
           .toList(),
       onChanged: onChanged,
     );
   }
 
   Widget _buildAudioPicker(bool isDark) {
-    bool hasFile = _selectedFileName != null;
+    final bool hasFile = _selectedFileName != null;
     return InkWell(
       onTap: _pickAudio,
       child: Container(
@@ -249,8 +275,10 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
                 color: hasFile ? Colors.green : AppColors.primaryPurple,
                 size: 30),
             const SizedBox(height: 8),
-            Text(_selectedFileName ?? "Tap to select audio file",
+            Text(_selectedFileName ?? 'Tap to select audio file',
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     color: hasFile ? Colors.green : AppColors.primaryPurple,
                     fontWeight: FontWeight.bold,
@@ -270,7 +298,7 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
               color: AppColors.primaryPurple,
               backgroundColor: AppColors.primaryPurple.withOpacity(0.1)),
           const SizedBox(height: 5),
-          Text("${(_uploadProgress * 100).toInt()}% uploaded",
+          Text('${(_uploadProgress * 100).toInt()}% uploaded',
               style: TextStyle(
                   fontSize: 11,
                   color: isDark ? Colors.white60 : Colors.black54)),
@@ -287,9 +315,9 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
                   borderRadius: BorderRadius.circular(15))),
           onPressed: _isUploading ? null : _handleUpload,
           child: _isUploading
-              ? const Text("UPLOADING...",
+              ? const Text('UPLOADING...',
                   style: TextStyle(color: Colors.white70))
-              : const Text("PUBLISH SERMON",
+              : const Text('PUBLISH SERMON',
                   style: TextStyle(
                       color: Colors.white, fontWeight: FontWeight.bold))));
 
@@ -305,13 +333,13 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
           const Icon(Icons.check_circle_outline_rounded,
               color: Colors.green, size: 80),
           const SizedBox(height: 20),
-          Text("Published!",
+          Text('Published!',
               style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: isDark ? Colors.white : Colors.black)),
           const SizedBox(height: 10),
-          Text("The message is now live for the congregation.",
+          Text('The message is now live for the congregation.',
               textAlign: TextAlign.center,
               style:
                   TextStyle(color: isDark ? Colors.white70 : Colors.black54)),
@@ -325,7 +353,7 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15))),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text("DONE",
+                  child: const Text('DONE',
                       style: TextStyle(
                           color: Colors.white, fontWeight: FontWeight.bold)))),
         ],

@@ -1,5 +1,4 @@
-// lib/screens/admin/dashboard_screen.dart
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -12,7 +11,7 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Dashboard Overview",
+          const Text('Dashboard Overview',
               style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -26,33 +25,44 @@ class DashboardScreen extends StatelessWidget {
             mainAxisSpacing: 15,
             childAspectRatio: 1.4,
             children: [
-              _streamStatCard("Total Sermons", "one_time_messages",
-                  Icons.music_note, Colors.indigo),
-              _streamStatCard("Total Listens", "listens",
+              _collectionCountCard('Total Sermons', 'sermons', Icons.music_note,
+                  Colors.indigo),
+              _collectionCountCard('Total Listens', 'listens',
                   Icons.play_circle_outline, Colors.red),
-              _streamStatCard("Total Users", "users", Icons.people_outline,
-                  Colors.deepPurple),
-              _streamStatCard(
-                  "Active Pastors", "pastors", Icons.trending_up, Colors.green),
+              _collectionCountCard(
+                  'Total Users', 'users', Icons.people_outline, Colors.deepPurple),
+              _collectionCountCard('Active Pastors', 'pastors', Icons.trending_up,
+                  Colors.green),
             ],
           ),
           const SizedBox(height: 25),
-          const Text("Recent Activity",
+          const Text('Recent Sermons',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
-                .collection('one_time_messages')
-                .orderBy('createdAt', descending: true)
+                .collection('sermons')
+                .orderBy('date', descending: true)
                 .limit(5)
                 .snapshots(),
             builder: (context, snapshot) {
               if (!snapshot.hasData) return const LinearProgressIndicator();
+              if (snapshot.data!.docs.isEmpty) {
+                return const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('No sermons uploaded yet.'),
+                  ),
+                );
+              }
               return Column(
                 children: snapshot.data!.docs.map((doc) {
-                  var data = doc.data() as Map<String, dynamic>;
-                  return _recentItem(data['title'], data['pastor'],
-                      data['views']?.toString() ?? "0");
+                  final data = doc.data() as Map<String, dynamic>;
+                  return _recentItem(
+                    (data['title'] ?? 'Untitled').toString(),
+                    (data['speaker'] ?? 'Unknown speaker').toString(),
+                    ((data['playCount'] ?? 0) as num).toString(),
+                  );
                 }).toList(),
               );
             },
@@ -62,13 +72,13 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _streamStatCard(
+  Widget _collectionCountCard(
       String title, String collection, IconData icon, Color color) {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection(collection).snapshots(),
       builder: (context, snapshot) {
-        String val =
-            snapshot.hasData ? snapshot.data!.docs.length.toString() : "...";
+        final val =
+            snapshot.hasData ? snapshot.data!.docs.length.toString() : '...';
         return _statCard(title, val, icon, color);
       },
     );
@@ -111,7 +121,7 @@ class DashboardScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(views, style: const TextStyle(fontWeight: FontWeight.bold)),
-            const Text("plays",
+            const Text('plays',
                 style: TextStyle(fontSize: 10, color: Colors.grey)),
           ],
         ),

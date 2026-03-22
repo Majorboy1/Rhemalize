@@ -537,10 +537,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               leading: const Icon(Icons.storage_rounded),
               title: const Text('Clear Audio Cache'),
               onTap: () async {
+                final messenger = ScaffoldMessenger.of(this.context);
                 await StorageService().remove('cached_audio_list');
-                if (!mounted) return;
+                if (!mounted || !context.mounted) return;
                 Navigator.pop(context);
-                ScaffoldMessenger.of(this.context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(content: Text('Cache cleared!')),
                 );
               },
@@ -696,3 +697,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
+

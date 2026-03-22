@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function adminEmail() {
+      return request.auth.token.email;
+    }
+
+    function adminByEmail() {
+      return signedIn() &&
+        adminEmail() != null &&
+        exists(/databases/$(database)/documents/admins/$(adminEmail()));
+    }
+
+    function adminByUserRole() {
+      return signedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isAdmin() {
+      return adminByEmail() || adminByUserRole();
+    }
+
+    match /admins/{adminId} {
+      allow read: if signedIn() && adminEmail() == adminId;
+      allow write: if false;
+    }
+
+    match /users/{userId} {
+      allow create: if signedIn() && request.auth.uid == userId;
+      allow get: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isAdmin();
+      allow update, delete: if signedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /pastors/{pastorId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /sermons/{sermonId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /listens/{listenId} {
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow get: if signedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -56,7 +56,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     final audioProvider = context.read<AudioProvider>();
 
     if (audioProvider.showFullPlayer && !_isModalOpen) {
-      Future.microtask(() => _showFullScreenPlayer(context));
+      Future.microtask(_showFullScreenPlayer);
     }
   }
 
@@ -66,7 +66,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     }
   }
 
-  void _showFullScreenPlayer(BuildContext context) {
+  void _showFullScreenPlayer() {
     if (_isModalOpen || !mounted) return;
     setState(() => _isModalOpen = true);
 
@@ -94,6 +94,9 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
   }
 
   Future<void> _handleLogout() async {
+    final audioProvider = context.read<AudioProvider>();
+    final authProvider = context.read<AuthProvider>();
+    final navigator = Navigator.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -116,11 +119,10 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     );
 
     if (confirm == true) {
-      context.read<AudioProvider>().stop();
-      await context.read<AuthProvider>().signOut();
+      audioProvider.stop();
+      await authProvider.signOut();
       if (mounted) {
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil('/login', (route) => false);
+        navigator.pushNamedAndRemoveUntil('/login', (route) => false);
       }
     }
   }
@@ -154,10 +156,16 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                 // Show statistics only on the primary sermon tab
                 if (_activeTab == AdminTab.sermons)
                   _buildStatsRow(
-                      sermonProv.oneTimeMessages.length,
-                      sermonProv.seriesMessages.length,
-                      sermonProv.isLoading,
-                      isDark),
+                    sermonProv.oneTimeMessages.length,
+                    sermonProv.seriesMessages.length,
+                    sermonProv.sermons.where((s) =>
+                        s.audioUrl.isEmpty ||
+                        (s.imageUrl == null || s.imageUrl!.isEmpty) ||
+                        (s.messageType == MessageType.series &&
+                            s.episodes.any((e) => e.audioUrl.isEmpty))).length,
+                    sermonProv.isLoading,
+                    isDark,
+                  ),
 
                 Expanded(
                   child: Container(
@@ -200,7 +208,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                   currentTime: audioProvider.position.inSeconds.toDouble(),
                   duration: audioProvider.duration.inSeconds.toDouble(),
                   onPlayPause: () => audioProvider.togglePlayPause(),
-                  onExpand: () => _showFullScreenPlayer(context),
+                  onExpand: _showFullScreenPlayer,
                   onClose: () => audioProvider.stop(),
                   onSkipForward: () => audioProvider.playNext(),
                   onSkipBack: () => audioProvider.playPrevious(),
@@ -314,7 +322,8 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     );
   }
 
-  Widget _buildStatsRow(int singles, int series, bool isLoading, bool isDark) {
+  Widget _buildStatsRow(
+      int singles, int series, int needsAttention, bool isLoading, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
@@ -324,6 +333,9 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
           const SizedBox(width: 12),
           _statCard("Series", series.toString(), Icons.layers_rounded,
               Colors.blueAccent, isLoading),
+          const SizedBox(width: 12),
+          _statCard("Attention", needsAttention.toString(),
+              Icons.warning_amber_rounded, Colors.orange, isLoading),
         ],
       ),
     );
@@ -363,3 +375,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     );
   }
 }
+
+
+
+

@@ -22,6 +22,9 @@
       }
     }
   },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
   "hosting": {
     "site": "rhemalize-church-audio-app",
     "public": "public",
