@@ -60,6 +60,10 @@ class AudioProvider with ChangeNotifier {
   String? _lastResumableId;
   String? _lastTrackId;
   Timer? _positionSaveTimer; // Timer for background position saving
+  String? _pendingHistoryTrackId;
+  String? _pendingHistorySermonId;
+  bool _pendingHistoryIsEpisode = false;
+  bool _pendingHistoryCommitted = false;
 
   AudioProvider() {
     _initAudio();
@@ -99,6 +103,7 @@ class AudioProvider with ChangeNotifier {
   void _listenToStates() {
     _audioService.player.positionStream.listen((pos) {
       _position = pos;
+      _commitPendingHistoryIfNeeded();
       notifyListeners();
     });
 
@@ -141,22 +146,46 @@ class AudioProvider with ChangeNotifier {
   }
 
   void _syncMetadata(int? index) {
-    if (index != null && _session != null) {
-      if (_session!.type == ContentType.series && _currentSermon != null) {
-        if (index < _currentSermon!.episodes.length) {
-          _currentEpisode = _currentSermon!.episodes[index];
-          _handleNewPlay(_currentEpisode!.id,
-              isEpisode: true, parentSermonId: _currentSermon!.id);
-        }
-      } else {
-        if (index < _session!.originalList.length) {
-          _currentSermon = _session!.originalList[index];
-          _currentEpisode = null;
-          _handleNewPlay(_currentSermon!.id, isEpisode: false);
+    if (index == null || _session == null) return;
+
+    final sequence = _audioService.player.sequence;
+    if (index < 0 || index >= sequence.length) return;
+
+    final tag = sequence[index].tag;
+    if (tag is! MediaItem) return;
+
+    if (_session!.type == ContentType.series && _currentSermon != null) {
+      Episode? matchedEpisode;
+      for (final episode in _currentSermon!.episodes) {
+        if (episode.audioUrl.isNotEmpty && episode.id == tag.id) {
+          matchedEpisode = episode;
+          break;
         }
       }
-      notifyListeners();
+      if (matchedEpisode == null) return;
+
+      _currentEpisode = matchedEpisode;
+      _handleNewPlay(
+        matchedEpisode.id,
+        isEpisode: true,
+        parentSermonId: _currentSermon!.id,
+      );
+    } else {
+      Sermon? matchedSermon;
+      for (final sermon in _session!.originalList) {
+        if (sermon.audioUrl.isNotEmpty && sermon.id == tag.id) {
+          matchedSermon = sermon;
+          break;
+        }
+      }
+      if (matchedSermon == null) return;
+
+      _currentSermon = matchedSermon;
+      _currentEpisode = null;
+      _handleNewPlay(matchedSermon.id, isEpisode: false);
     }
+
+    notifyListeners();
   }
 
   // ================= PERSISTENCE LOGIC =================
@@ -187,20 +216,47 @@ class AudioProvider with ChangeNotifier {
   void _handleNewPlay(String id,
       {bool isEpisode = false, String? parentSermonId}) {
     if (_lastTrackId == id) return;
+
     _lastTrackId = id;
+    _pendingHistoryTrackId = id;
+    _pendingHistorySermonId = isEpisode ? parentSermonId : id;
+    _pendingHistoryIsEpisode = isEpisode;
+    _pendingHistoryCommitted = false;
+  }
 
-    _playedOrder.remove(id);
-    _playedOrder.insert(0, id);
+  void _commitPendingHistoryIfNeeded() {
+    if (_pendingHistoryCommitted || _position.inSeconds < 30) return;
 
-    if (!_playedIds.contains(id)) {
-      _playedIds.add(id);
-      _savePlayedHistory();
-      _updateLastListenDate();
-      _updateStreakInFirestore();
-    } else {
-      _savePlayedHistory();
-    }
-    _recordListenToFirestore(id, isEpisode, parentSermonId: parentSermonId);
+    final trackId = _pendingHistoryTrackId;
+    final sermonId = _pendingHistorySermonId;
+    if (trackId == null || sermonId == null) return;
+
+    _pendingHistoryCommitted = true;
+    _playedOrder.remove(sermonId);
+    _playedOrder.insert(0, sermonId);
+    _playedIds.add(sermonId);
+    _resumePositions[trackId] = _position.inMilliseconds;
+    _lastResumableId = trackId;
+
+    unawaited(_persistCommittedHistory(trackId, sermonId));
+  }
+
+  Future<void> _persistCommittedHistory(String trackId, String sermonId) async {
+    await _savePlayedHistory();
+    await _saveLastResumableId(trackId);
+    await _updateLastListenDate();
+    await _updateStreakInFirestore();
+    _recordListenToFirestore(
+      trackId,
+      _pendingHistoryIsEpisode,
+      parentSermonId: _pendingHistoryIsEpisode ? sermonId : null,
+    );
+    notifyListeners();
+  }
+
+  Future<void> _saveLastResumableId(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastResumeKey, id);
   }
 
   Future<void> _updateStreakInFirestore() async {
@@ -336,6 +392,7 @@ class AudioProvider with ChangeNotifier {
         originalList: List.from(currentList));
     _currentSermon = sermon;
     _currentEpisode = null;
+    _handleNewPlay(sermon.id, isEpisode: false);
 
     final playableSermons = _session!.originalList
         .where((s) => s.audioUrl.isNotEmpty)
@@ -380,6 +437,7 @@ class AudioProvider with ChangeNotifier {
         originalList: List.from(currentList));
     _currentSermon = series;
     _currentEpisode = episode;
+    _handleNewPlay(episode.id, isEpisode: true, parentSermonId: series.id);
 
     final playableEpisodes =
         series.episodes.where((e) => e.audioUrl.isNotEmpty).toList();
@@ -490,6 +548,10 @@ class AudioProvider with ChangeNotifier {
     _isBuffering = false;
     _isPlaying = false;
     _lastTrackId = null;
+    _pendingHistoryTrackId = null;
+    _pendingHistorySermonId = null;
+    _pendingHistoryIsEpisode = false;
+    _pendingHistoryCommitted = false;
     notifyListeners();
   }
 
@@ -544,7 +606,7 @@ class AudioProvider with ChangeNotifier {
       _playedOrder.addAll(savedIds);
     }
     for (final id in _playedOrder) {
-      final savedMs = prefs.getInt('');
+      final savedMs = prefs.getInt('$_positionPrefix$id');
       if (savedMs != null && savedMs > 0) {
         _resumePositions[id] = savedMs;
       }
@@ -552,6 +614,12 @@ class AudioProvider with ChangeNotifier {
     final String? dateStr = prefs.getString(_lastListenKey);
     if (dateStr != null) _lastListenDate = DateTime.parse(dateStr);
     _lastResumableId = prefs.getString(_lastResumeKey);
+    if (_lastResumableId != null) {
+      final resumeMs = prefs.getInt('$_positionPrefix$_lastResumableId');
+      if (resumeMs != null && resumeMs > 0) {
+        _resumePositions[_lastResumableId!] = resumeMs;
+      }
+    }
     notifyListeners();
   }
 
@@ -564,9 +632,12 @@ class AudioProvider with ChangeNotifier {
   Future<void> clearPlayedHistory() async {
     _playedIds.clear();
     _playedOrder.clear();
+    _resumePositions.clear();
+    _lastResumableId = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_playedKey);
     await prefs.remove(_playedOrderKey);
+    await prefs.remove(_lastResumeKey);
     notifyListeners();
   }
 
@@ -598,4 +669,6 @@ class AudioProvider with ChangeNotifier {
     }
   }
 }
+
+
 

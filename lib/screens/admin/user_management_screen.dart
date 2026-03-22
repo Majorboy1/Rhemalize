@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 enum _UserFilter { all, active, admins, recent }
 
@@ -39,15 +39,40 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final users = snapshot.data?.docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[];
-        final totalUsers = users.length;
-        final activeUsers = users.where(_isActive).length;
-        final adminUsers = users.where((doc) {
-          final data = doc.data();
-          return _readRole(data) == 'admin';
-        }).length;
-        final recentUsers = users.where(_isRecent).length;
+        final users =
+            snapshot.data?.docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[];
         final filteredUsers = _filterUsers(users);
+        final metrics = [
+          _MetricData(
+            value: users.length.toString(),
+            label: 'Total',
+            background: const Color(0xFFF8F7FF),
+            color: const Color(0xFF6A629E),
+            icon: Icons.people_alt_outlined,
+          ),
+          _MetricData(
+            value: users.where(_isActive).length.toString(),
+            label: 'Active',
+            background: const Color(0xFFE6FFFA),
+            color: const Color(0xFF38B2AC),
+            icon: Icons.bolt_rounded,
+          ),
+          _MetricData(
+            value: users.where((doc) => _readRole(doc.data()) == 'admin').length
+                .toString(),
+            label: 'Admins',
+            background: const Color(0xFFEBF8FF),
+            color: const Color(0xFF3182CE),
+            icon: Icons.admin_panel_settings_outlined,
+          ),
+          _MetricData(
+            value: users.where(_isRecent).length.toString(),
+            label: 'Recent',
+            background: const Color(0xFFFFF7ED),
+            color: const Color(0xFFEA580C),
+            icon: Icons.history_rounded,
+          ),
+        ];
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -63,19 +88,23 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _statBox(totalUsers.toString(), 'Total', const Color(0xFFF8F7FF),
-                      const Color(0xFF6A629E), Icons.people_alt_outlined),
-                  _statBox(activeUsers.toString(), 'Active', const Color(0xFFE6FFFA),
-                      const Color(0xFF38B2AC), Icons.bolt_rounded),
-                  _statBox(adminUsers.toString(), 'Admins', const Color(0xFFEBF8FF),
-                      const Color(0xFF3182CE), Icons.admin_panel_settings_outlined),
-                  _statBox(recentUsers.toString(), 'Recent', const Color(0xFFFFF7ED),
-                      const Color(0xFFEA580C), Icons.history_rounded),
-                ],
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final bool useTwoColumns = constraints.maxWidth >= 520;
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: metrics.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: useTwoColumns ? 4 : 2,
+                      mainAxisSpacing: 10,
+                      crossAxisSpacing: 10,
+                      childAspectRatio: useTwoColumns ? 1.6 : 1.45,
+                    ),
+                    itemBuilder: (context, index) =>
+                        _metricCard(metrics[index]),
+                  );
+                },
               ),
               const SizedBox(height: 18),
               TextField(
@@ -111,6 +140,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               ),
               const SizedBox(height: 24),
               Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
@@ -126,39 +156,38 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Registered Users (${filteredUsers.length})',
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      'Registered Users (${filteredUsers.length})',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const Divider(height: 30),
                     if (filteredUsers.isEmpty)
                       const Center(child: Text('No users found'))
                     else
-                      ListView.builder(
+                      ListView.separated(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: filteredUsers.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final data = filteredUsers[index].data();
-                          final String name = _readName(data);
-                          final String email = _readEmail(data);
-                          final String role = _readRole(data);
-                          final String lastActive =
-                              _formatTimestamp(_readTimestamp(data['lastActive']));
-                          final bool isActiveUser = _isActive(filteredUsers[index]);
-
-                          return _userTile(
-                            name,
-                            email,
-                            role,
-                            lastActive,
-                            isActiveUser ? Colors.green : Colors.grey,
-                            isDark,
+                          return _userCard(
+                            name: _readName(data),
+                            email: _readEmail(data),
+                            role: _readRole(data),
+                            lastActive:
+                                _formatTimestamp(_readTimestamp(data['lastActive'])),
+                            isActiveUser: _isActive(filteredUsers[index]),
+                            isDark: isDark,
                           );
                         },
                       ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         );
@@ -205,9 +234,142 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
   }
 
+  Widget _metricCard(_MetricData metric) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: metric.background,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(metric.icon, color: metric.color, size: 20),
+          const SizedBox(height: 12),
+          Text(
+            metric.value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            metric.label,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.black54,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _userCard({
+    required String name,
+    required String email,
+    required String role,
+    required String lastActive,
+    required bool isActiveUser,
+    required bool isDark,
+  }) {
+    final Color statusColor = isActiveUser ? Colors.green : Colors.grey;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF262626) : const Color(0xFFF8F9FB),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            backgroundColor: const Color(0xFF6A629E).withOpacity(0.1),
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: const TextStyle(
+                color: Color(0xFF6A629E),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  email,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Last active: $lastActive',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 72,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isActiveUser ? 'Active' : 'Idle',
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  role.toUpperCase(),
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    color: isDark ? Colors.white70 : Colors.black54,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _filterUsers(
       List<QueryDocumentSnapshot<Map<String, dynamic>>> users) {
-    return users.where((doc) {
+    final filtered = users.where((doc) {
       final data = doc.data();
       final name = _readName(data).toLowerCase();
       final email = _readEmail(data).toLowerCase();
@@ -222,6 +384,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
       return matchesQuery && matchesFilter;
     }).toList();
+
+    filtered.sort((a, b) {
+      final aTime = _readTimestamp(a.data()['lastActive'])?.toDate();
+      final bTime = _readTimestamp(b.data()['lastActive'])?.toDate();
+      if (aTime == null && bTime == null) return 0;
+      if (aTime == null) return 1;
+      if (bTime == null) return -1;
+      return bTime.compareTo(aTime);
+    });
+
+    return filtered;
   }
 
   bool _isActive(QueryDocumentSnapshot<Map<String, dynamic>> doc) {
@@ -276,78 +449,20 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       ),
     );
   }
+}
 
-  Widget _statBox(
-      String val, String label, Color bg, Color col, IconData icon) {
-    return SizedBox(
-      width: 150,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration:
-            BoxDecoration(color: bg, borderRadius: BorderRadius.circular(15)),
-        child: Column(
-          children: [
-            Icon(icon, color: col, size: 20),
-            const SizedBox(height: 8),
-            Text(val,
-                style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87)),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.black54,
-                    fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
+class _MetricData {
+  final String value;
+  final String label;
+  final Color background;
+  final Color color;
+  final IconData icon;
 
-  Widget _userTile(String name, String email, String role, String lastActive,
-      Color statusCol, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFF6A629E).withOpacity(0.1),
-          child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(
-                  color: Color(0xFF6A629E), fontWeight: FontWeight.bold)),
-        ),
-        title: Text(name,
-            style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: isDark ? Colors.white : Colors.black87)),
-        subtitle: Text('$email\nLast active: $lastActive',
-            style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        isThreeLine: true,
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                  color: statusCol.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text(statusCol == Colors.green ? 'Active' : 'Idle',
-                  style: TextStyle(
-                      color: statusCol,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold)),
-            ),
-            const SizedBox(height: 6),
-            Text(role.toUpperCase(),
-                style: TextStyle(
-                    color: isDark ? Colors.white70 : Colors.black54,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
+  const _MetricData({
+    required this.value,
+    required this.label,
+    required this.background,
+    required this.color,
+    required this.icon,
+  });
 }

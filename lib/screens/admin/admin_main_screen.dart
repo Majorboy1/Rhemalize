@@ -5,7 +5,6 @@ import '../../providers/audio_provider.dart';
 import '../../providers/sermon_provider.dart';
 import '../../providers/favorites_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../models/sermon.dart';
 
 // Screens
 import '../profile_screen.dart';
@@ -158,11 +157,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
                   _buildStatsRow(
                     sermonProv.oneTimeMessages.length,
                     sermonProv.seriesMessages.length,
-                    sermonProv.sermons.where((s) =>
-                        s.audioUrl.isEmpty ||
-                        (s.imageUrl == null || s.imageUrl!.isEmpty) ||
-                        (s.messageType == MessageType.series &&
-                            s.episodes.any((e) => e.audioUrl.isEmpty))).length,
                     sermonProv.isLoading,
                     isDark,
                   ),
@@ -255,11 +249,12 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
         return ProfileScreen(
           userName: auth.user?.displayName ?? 'Admin User',
           userEmail: auth.user?.email ?? '',
-          currentStreak: 7,
+          currentStreak: null,
           totalSermons: sermon.sermons.length,
           favorites: context.watch<FavoritesProvider>().favoriteSermonIds,
           sermons: sermon.sermons,
           onLogout: _handleLogout,
+          isAdminProfile: true,
         );
     }
   }
@@ -323,7 +318,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
   }
 
   Widget _buildStatsRow(
-      int singles, int series, int needsAttention, bool isLoading, bool isDark) {
+      int singles, int series, bool isLoading, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
@@ -333,9 +328,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
           const SizedBox(width: 12),
           _statCard("Series", series.toString(), Icons.layers_rounded,
               Colors.blueAccent, isLoading),
-          const SizedBox(width: 12),
-          _statCard("Attention", needsAttention.toString(),
-              Icons.warning_amber_rounded, Colors.orange, isLoading),
+
         ],
       ),
     );
@@ -375,6 +368,8 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     );
   }
 }
+
+
 
 
 

@@ -17,6 +17,7 @@ class ProfileScreen extends StatefulWidget {
   final Set<String>? favorites;
   final List<Sermon> sermons;
   final VoidCallback onLogout;
+  final bool isAdminProfile;
 
   const ProfileScreen({
     super.key,
@@ -28,8 +29,8 @@ class ProfileScreen extends StatefulWidget {
     this.favorites,
     required this.sermons,
     required this.onLogout,
+    this.isAdminProfile = false,
   });
-
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -54,6 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final favoritesProvider = context.watch<FavoritesProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final recentHistory = _resolveRecentHistory(widget.sermons, audio.recentPlayedIds);
+    final showGrowth = !widget.isAdminProfile;
 
     return Scaffold(
       backgroundColor:
@@ -64,11 +66,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             _buildModernHeader(authProvider.user),
             _buildGlassStats(isDark),
-            _buildSectionHeader('Spiritual Growth'),
-            _buildStreakTile(),
-            _buildSectionHeader('Engagement'),
-            _buildEngagementCard(audio, favoritesProvider, recentHistory, isDark),
+            if (showGrowth) _buildSectionHeader('Spiritual Growth'),
+            if (showGrowth) _buildStreakTile(),
             _buildSectionHeader('Account & App'),
+            _buildEngagementCard(audio, favoritesProvider, recentHistory, isDark),
+            _buildSectionHeader('Engagement'),
             _buildActionCard([
               _menuItem(
                 icon: Icons.history_rounded,
@@ -205,7 +207,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             _statCol((widget.totalSermons ?? 0).toString(), 'Heard'),
             _statCol((widget.favorites?.length ?? 0).toString(), 'Saved'),
-            _statCol(calculatedStreak.toString(), 'Streak'),
+            _statCol(widget.isAdminProfile ? 'Admin' : calculatedStreak.toString(),
+                widget.isAdminProfile ? 'Role' : 'Streak'),
           ],
         ),
       ),
@@ -697,5 +700,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
+
 
 

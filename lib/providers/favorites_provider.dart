@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,17 +10,37 @@ class FavoritesProvider with ChangeNotifier {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
+      _favoritesSubscription;
 
   Set<String> get favoriteSermonIds => _favoriteIds;
 
   FavoritesProvider() {
     _auth.authStateChanges().listen((user) {
+      _favoritesSubscription?.cancel();
       if (user != null) {
-        loadFavoritesFromFirestore();
+        _listenToFavorites(user.uid);
       } else {
         _favoriteIds.clear();
         notifyListeners();
       }
+    });
+  }
+
+  void _listenToFavorites(String userId) {
+    _favoritesSubscription = _firestore
+        .collection('users')
+        .doc(userId)
+        .snapshots()
+        .listen((doc) {
+      final data = doc.data();
+      final List<dynamic> remoteFavorites = data?['favorites'] ?? [];
+      _favoriteIds
+        ..clear()
+        ..addAll(remoteFavorites.map((e) => e.toString()));
+      notifyListeners();
+    }, onError: (e) {
+      debugPrint('Favorite Sync Error: $e');
     });
   }
 
@@ -32,71 +53,50 @@ class FavoritesProvider with ChangeNotifier {
     return _favoriteIds.contains(id);
   }
 
-  // UPDATED: Optimistic UI for instant feedback
   Future<bool> toggleFavorite(String id) async {
     final user = _auth.currentUser;
     if (user == null) return false;
 
     final userDoc = _firestore.collection('users').doc(user.uid);
-    bool added;
+    final wasFavorite = _favoriteIds.contains(id);
 
-    if (_favoriteIds.contains(id)) {
-      _favoriteIds.remove(id); // Remove locally first
-      added = false;
+    if (wasFavorite) {
+      _favoriteIds.remove(id);
     } else {
-      _favoriteIds.add(id); // Add locally first
-      added = true;
+      _favoriteIds.add(id);
     }
-
-    // Notify UI immediately before the network call
     notifyListeners();
 
     try {
-      if (added) {
+      if (wasFavorite) {
+        await userDoc.set({
+          'favorites': FieldValue.arrayRemove([id])
+        }, SetOptions(merge: true));
+      } else {
         await userDoc.set({
           'favorites': FieldValue.arrayUnion([id])
         }, SetOptions(merge: true));
-      } else {
-        await userDoc.update({
-          'favorites': FieldValue.arrayRemove([id])
-        });
       }
     } catch (e) {
-      // Rollback on error if network fails
-      if (added)
-        _favoriteIds.remove(id);
-      else
+      if (wasFavorite) {
         _favoriteIds.add(id);
-      notifyListeners();
-      debugPrint("Favorite Sync Error: $e");
-    }
-
-    return added;
-  }
-
-  Future<void> loadFavoritesFromFirestore() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-    try {
-      final doc = await _firestore.collection('users').doc(user.uid).get();
-      if (doc.exists && doc.data() != null) {
-        final List<dynamic> remoteFavorites = doc.data()!['favorites'] ?? [];
-        _favoriteIds.clear();
-        _favoriteIds.addAll(remoteFavorites.map((e) => e.toString()));
-        notifyListeners();
+      } else {
+        _favoriteIds.remove(id);
       }
-    } catch (e) {
-      debugPrint("Error loading favorites: $e");
+      notifyListeners();
+      debugPrint('Favorite Sync Error: $e');
     }
+
+    return !wasFavorite;
   }
 
   List<Sermon> get favoriteSermons {
-    List<Sermon> favorites = [];
-    for (var sermon in _allSermons) {
+    final List<Sermon> favorites = [];
+    for (final sermon in _allSermons) {
       if (_favoriteIds.contains(sermon.id)) {
         favorites.add(sermon);
       }
-      for (var episode in sermon.episodes) {
+      for (final episode in sermon.episodes) {
         if (_favoriteIds.contains(episode.id)) {
           favorites.add(Sermon(
             id: episode.id,
@@ -109,12 +109,18 @@ class FavoritesProvider with ChangeNotifier {
             date: episode.date,
             duration: episode.duration,
             messageType: MessageType.single,
-            episodes: [],
+            episodes: const [],
             seriesTitle: sermon.title,
           ));
         }
       }
     }
     return favorites;
+  }
+
+  @override
+  void dispose() {
+    _favoritesSubscription?.cancel();
+    super.dispose();
   }
 }
