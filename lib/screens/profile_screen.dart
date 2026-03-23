@@ -14,7 +14,8 @@ class ProfileScreen extends StatefulWidget {
   final int? currentStreak;
   final DateTime? lastListenDate;
   final int? totalSermons;
-  final Set<String>? favorites;
+  final Set<String>?
+      favorites; // Kept for constructor compatibility, but ignored in logic
   final List<Sermon> sermons;
   final VoidCallback onLogout;
   final bool isAdminProfile;
@@ -31,6 +32,7 @@ class ProfileScreen extends StatefulWidget {
     required this.onLogout,
     this.isAdminProfile = false,
   });
+
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -52,9 +54,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final audio = context.watch<AudioProvider>();
     final authProvider = context.watch<AuthProvider>();
+    // LIVE SOURCE OF TRUTH
     final favoritesProvider = context.watch<FavoritesProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final recentHistory = _resolveRecentHistory(widget.sermons, audio.recentPlayedIds);
+
+    final recentHistory =
+        _resolveRecentHistory(widget.sermons, audio.recentPlayedIds);
     final showGrowth = !widget.isAdminProfile;
 
     return Scaffold(
@@ -65,11 +70,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             _buildModernHeader(authProvider.user),
-            _buildGlassStats(isDark),
+            _buildGlassStats(isDark, favoritesProvider),
             if (showGrowth) _buildSectionHeader('Spiritual Growth'),
             if (showGrowth) _buildStreakTile(),
             _buildSectionHeader('Account & App'),
-            _buildEngagementCard(audio, favoritesProvider, recentHistory, isDark),
+            _buildEngagementCard(
+                audio, favoritesProvider, recentHistory, isDark),
             _buildSectionHeader('Engagement'),
             _buildActionCard([
               _menuItem(
@@ -86,6 +92,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   audio,
                   _resolveRecentHistory(
                     widget.sermons,
+                    // FIX: Use live list from Provider here
                     favoritesProvider.favoriteSermonIds.toList(),
                   ),
                   title: 'Saved Messages',
@@ -136,53 +143,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white24,
-              ),
+                  shape: BoxShape.circle, color: Colors.white24),
               child: CircleAvatar(
                 radius: 45,
                 backgroundColor: Colors.white10,
                 child: ClipOval(
                   child: user?.photoURL != null
-                      ? Image.network(
-                          user!.photoURL!,
-                          fit: BoxFit.cover,
-                          width: 90,
-                          height: 90,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.person,
-                            size: 45,
-                            color: Colors.white,
-                          ),
-                        )
+                      ? Image.network(user!.photoURL!,
+                          fit: BoxFit.cover, width: 90, height: 90)
                       : const Icon(Icons.person, size: 45, color: Colors.white),
                 ),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            widget.userName,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+          Text(widget.userName,
+              style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white)),
           const SizedBox(height: 4),
-          Text(
-            widget.userEmail,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
-              fontSize: 14,
-            ),
-          ),
+          Text(widget.userEmail,
+              style: TextStyle(
+                  color: Colors.white.withOpacity(0.7), fontSize: 14)),
         ],
       ),
     );
   }
 
-  Widget _buildGlassStats(bool isDark) {
+  Widget _buildGlassStats(bool isDark, FavoritesProvider favoritesProvider) {
     return Transform.translate(
       offset: const Offset(0, -30),
       child: Container(
@@ -198,16 +187,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               offset: const Offset(0, 10),
             )
           ],
-          border: Border.all(
-            color: isDark ? Colors.white10 : Colors.transparent,
-          ),
+          border:
+              Border.all(color: isDark ? Colors.white10 : Colors.transparent),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _statCol((widget.totalSermons ?? 0).toString(), 'Heard'),
-            _statCol((widget.favorites?.length ?? 0).toString(), 'Saved'),
-            _statCol(widget.isAdminProfile ? 'Admin' : calculatedStreak.toString(),
+            // FIX: Force live length from provider
+            _statCol(
+                favoritesProvider.favoriteSermonIds.length.toString(), 'Saved'),
+            _statCol(
+                widget.isAdminProfile ? 'Admin' : calculatedStreak.toString(),
                 widget.isAdminProfile ? 'Role' : 'Streak'),
           ],
         ),
@@ -218,22 +209,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _statCol(String val, String label) {
     return Column(
       children: [
-        Text(
-          val,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primaryPurple,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(val,
+            style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryPurple)),
+        const SizedBox(height: 4),
+        Text(label,
+            style: const TextStyle(
+                fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
       ],
     );
   }
@@ -243,15 +227,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: const EdgeInsets.fromLTRB(28, 10, 24, 12),
       child: Align(
         alignment: Alignment.centerLeft,
-        child: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey,
-            letterSpacing: 1.2,
-          ),
-        ),
+        child: Text(title,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+                letterSpacing: 1.2)),
       ),
     );
   }
@@ -262,16 +243,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       const Color(0xFF310558)
     ];
     if (calculatedStreak >= 3) {
-      streakColors = [
-        const Color(0xFFFF9966),
-        const Color(0xFFFF5E62)
-      ];
+      streakColors = [const Color(0xFFFF9966), const Color(0xFFFF5E62)];
     }
     if (calculatedStreak >= 7) {
-      streakColors = [
-        const Color(0xFF8E2DE2),
-        const Color(0xFF4A00E0)
-      ];
+      streakColors = [const Color(0xFF8E2DE2), const Color(0xFF4A00E0)];
     }
 
     return Container(
@@ -282,39 +257,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: streakColors[0].withOpacity(0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          )
+              color: streakColors[0].withOpacity(0.4),
+              blurRadius: 15,
+              offset: const Offset(0, 5))
         ],
       ),
       child: Row(
         children: [
           Icon(
-            calculatedStreak >= 3
-                ? Icons.local_fire_department_rounded
-                : Icons.bolt_rounded,
-            color: Colors.white,
-            size: 36,
-          ),
+              calculatedStreak >= 3
+                  ? Icons.local_fire_department_rounded
+                  : Icons.bolt_rounded,
+              color: Colors.white,
+              size: 36),
           const SizedBox(width: 16),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text('$calculatedStreak Day Streak',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18)),
               Text(
-                '$calculatedStreak Day Streak',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              Text(
-                calculatedStreak > 0
-                    ? 'You are staying consistent. Keep going.'
-                    : 'Start your spiritual journey today!',
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
+                  calculatedStreak > 0
+                      ? 'You are staying consistent. Keep going.'
+                      : 'Start your spiritual journey today!',
+                  style: const TextStyle(color: Colors.white, fontSize: 12)),
             ],
           ),
         ],
@@ -322,8 +291,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildEngagementCard(AudioProvider audio,
-      FavoritesProvider favoritesProvider, List<Sermon> recentHistory, bool isDark) {
+  Widget _buildEngagementCard(
+      AudioProvider audio,
+      FavoritesProvider favoritesProvider,
+      List<Sermon> recentHistory,
+      bool isDark) {
     final lastListenLabel = widget.lastListenDate == null
         ? 'No listening yet'
         : _formatProfileDate(widget.lastListenDate!);
@@ -336,9 +308,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.1 : 0.03),
-            blurRadius: 10,
-          )
+              color: Colors.black.withOpacity(isDark ? 0.1 : 0.03),
+              blurRadius: 10)
         ],
       ),
       child: Column(
@@ -352,8 +323,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   value: audio.lastResumableId == null
                       ? 'Nothing queued'
                       : _formatPosition(
-                          audio.getSavedPosition(audio.lastResumableId!),
-                        ),
+                          audio.getSavedPosition(audio.lastResumableId!)),
                   color: Colors.deepPurple,
                 ),
               ),
@@ -362,6 +332,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: _engagementTile(
                   icon: Icons.favorite_rounded,
                   label: 'Favorites Sync',
+                  // FIX: Use live length from provider
                   value: '${favoritesProvider.favoriteSermonIds.length} saved',
                   color: Colors.pinkAccent,
                 ),
@@ -372,22 +343,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Row(
             children: [
               Expanded(
-                child: _engagementTile(
-                  icon: Icons.history_rounded,
-                  label: 'Recent Plays',
-                  value: '${recentHistory.length}',
-                  color: Colors.blueAccent,
-                ),
-              ),
+                  child: _engagementTile(
+                      icon: Icons.history_rounded,
+                      label: 'Recent Plays',
+                      value: '${recentHistory.length}',
+                      color: Colors.blueAccent)),
               const SizedBox(width: 12),
               Expanded(
-                child: _engagementTile(
-                  icon: Icons.calendar_today_rounded,
-                  label: 'Last Listen',
-                  value: lastListenLabel,
-                  color: Colors.orange,
-                ),
-              ),
+                  child: _engagementTile(
+                      icon: Icons.calendar_today_rounded,
+                      label: 'Last Listen',
+                      value: lastListenLabel,
+                      color: Colors.orange)),
             ],
           ),
         ],
@@ -395,36 +362,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _engagementTile({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
+  Widget _engagementTile(
+      {required IconData icon,
+      required String label,
+      required String value,
+      required Color color}) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(18),
-      ),
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(18)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color, size: 20),
           const SizedBox(height: 12),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
+          Text(value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 4),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
-          ),
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
       ),
     );
@@ -438,41 +400,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.1 : 0.02),
-            blurRadius: 10,
-          )
+              color: Colors.black.withOpacity(isDark ? 0.1 : 0.02),
+              blurRadius: 10)
         ],
       ),
       child: Column(children: items),
     );
   }
 
-  Widget _menuItem({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _menuItem(
+      {required IconData icon,
+      required String title,
+      required Color color,
+      required VoidCallback onTap}) {
     return ListTile(
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12)),
         child: Icon(icon, color: color, size: 22),
       ),
-      title: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: Colors.grey,
-        size: 20,
-      ),
+      title: Text(title,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+      trailing:
+          const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
     );
   }
 
@@ -489,9 +443,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           foregroundColor: Colors.redAccent,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
       ),
     );
@@ -502,10 +455,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: EdgeInsets.symmetric(vertical: 24),
       child: Opacity(
         opacity: 0.4,
-        child: Text(
-          'Rhemalize v1.2.0 • Built by Wisdom Magnus • Build 2026',
-          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-        ),
+        child: Text('Rhemalize v1.2.0 • Built by Wisdom Magnus • 2026',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
       ),
     );
   }
@@ -515,38 +466,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       backgroundColor: isDark ? const Color(0xFF1E1E2E) : Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10))),
             const SizedBox(height: 24),
-            const Text(
-              'Settings',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            const Text('Settings',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.storage_rounded),
               title: const Text('Clear Audio Cache'),
               onTap: () async {
-                final messenger = ScaffoldMessenger.of(this.context);
                 await StorageService().remove('cached_audio_list');
-                if (!mounted || !context.mounted) return;
+                if (!mounted) return;
                 Navigator.pop(context);
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Cache cleared!')),
-                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Cache cleared!')));
               },
             ),
           ],
@@ -555,20 +499,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  List<Sermon> _resolveRecentHistory(List<Sermon> sermons, List<String> recentIds) {
+  List<Sermon> _resolveRecentHistory(
+      List<Sermon> sermons, List<String> recentIds) {
     final List<Sermon> history = [];
-
     for (final id in recentIds) {
       for (final sermon in sermons) {
         if (sermon.id == id) {
           history.add(sermon);
           break;
         }
-
-        final episodeMatches =
-            sermon.episodes.where((episode) => episode.id == id).toList();
-        if (episodeMatches.isNotEmpty) {
-          final episode = episodeMatches.first;
+        final ep = sermon.episodes.where((e) => e.id == id).toList();
+        if (ep.isNotEmpty) {
+          final episode = ep.first;
           history.add(Sermon(
             id: episode.id,
             title: episode.title,
@@ -588,7 +530,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     }
-
     return history;
   }
 
@@ -602,35 +543,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  String _formatPosition(Duration position) {
-    final hours = position.inHours;
-    final minutes = position.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = position.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  String _formatPosition(Duration pos) {
+    final h = pos.inHours;
+    final m = pos.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = pos.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return h > 0 ? '$h:$m:$s' : '$m:$s';
   }
 
-  void _showListeningHistorySheet(
-    AudioProvider audio,
-    List<Sermon> sermons, {
-    String title = 'Your Recent Listening',
-    String emptyText = 'Start listening to see your history!',
-  }) {
+  void _showListeningHistorySheet(AudioProvider audio, List<Sermon> sermons,
+      {String title = 'Your Recent Listening',
+      String emptyText = 'Start listening to see your history!'}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.6,
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text(title,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             Expanded(
               child: sermons.isEmpty
@@ -639,26 +575,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       itemCount: sermons.length,
                       itemBuilder: (_, i) => ListTile(
                         leading: CircleAvatar(
-                          backgroundColor:
-                              AppColors.primaryPurple.withOpacity(0.1),
-                          child: Text('${i + 1}'),
-                        ),
-                        title: Text(
-                          sermons[i].title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          sermons[i].seriesTitle != null
-                              ? '${sermons[i].seriesTitle} • ${sermons[i].speaker}'
-                              : sermons[i].speaker,
-                        ),
+                            backgroundColor:
+                                AppColors.primaryPurple.withOpacity(0.1),
+                            child: Text('${i + 1}')),
+                        title: Text(sermons[i].title,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text(sermons[i].seriesTitle != null
+                            ? '${sermons[i].seriesTitle} • ${sermons[i].speaker}'
+                            : sermons[i].speaker),
                         onTap: () {
                           audio.playSermon(
-                            sermons[i],
-                            sermons,
-                            PlaybackContext.home,
-                          );
+                              sermons[i], sermons, PlaybackContext.home);
                           Navigator.pop(context);
                         },
                       ),
@@ -679,28 +606,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         content: const Text('Are you sure you want to log out?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              widget.onLogout();
-            },
-            child: const Text(
-              'Logout',
-              style: TextStyle(
-                color: Colors.redAccent,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+              onPressed: () {
+                Navigator.pop(context);
+                widget.onLogout();
+              },
+              child: const Text('Logout',
+                  style: TextStyle(
+                      color: Colors.redAccent, fontWeight: FontWeight.bold))),
         ],
       ),
     );
   }
 }
-
-
-
-

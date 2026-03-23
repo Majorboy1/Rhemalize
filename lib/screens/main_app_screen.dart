@@ -26,7 +26,6 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   BottomTab _activeTab = BottomTab.home;
   bool _isPlayerModalOpen = false;
-  String? _lastShownAudioError;
 
   @override
   void initState() {
@@ -51,29 +50,6 @@ class _MainAppState extends State<MainApp> {
   void _handleAudioStateChange() {
     if (!mounted) return;
     final audioProvider = context.read<AudioProvider>();
-
-    if (audioProvider.lastError != null &&
-        audioProvider.lastError != _lastShownAudioError) {
-      _lastShownAudioError = audioProvider.lastError;
-      ScaffoldMessenger.of(context)
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text(
-              'Playback failed. ',
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: 'DISMISS',
-              onPressed: audioProvider.clearLastError,
-            ),
-          ),
-        );
-    } else if (audioProvider.lastError == null) {
-      _lastShownAudioError = null;
-    }
 
     // Optimization: Only trigger modal if provider specifically flags it
     // and we aren't already showing it.
@@ -110,10 +86,6 @@ class _MainAppState extends State<MainApp> {
     // This prevents the screen from freezing/stuttering while audio is buffering.
     final bool hasActiveAudio = context.select<AudioProvider, bool>(
         (pro) => pro.currentSermon != null || pro.currentEpisode != null);
-    final int playedCount =
-        context.select<AudioProvider, int>((pro) => pro.playedSermonIds.length);
-    final DateTime lastListenDate =
-        context.select<AudioProvider, DateTime>((pro) => pro.lastListenDate);
 
     // We use .read() for these because their internal state changes (like sermon lists)
     // are handled by the sub-screens (HomeScreen, etc.), not the MainApp shell.
@@ -140,12 +112,11 @@ class _MainAppState extends State<MainApp> {
         currentScreen = ProfileScreen(
           userName: authProvider.user?.displayName ?? 'User',
           userEmail: authProvider.user?.email ?? '',
-          currentStreak: null,
-          lastListenDate: lastListenDate,
-          totalSermons: playedCount,
+          currentStreak: 0,
+          totalSermons: sermonProvider.sermons.length,
           favorites: favoritesProvider.favoriteSermonIds,
           sermons: sermonProvider.sermons,
-          onLogout: () => authProvider.signOut(audioProvider: context.read<AudioProvider>()),
+          onLogout: () => authProvider.signOut(),
         );
         break;
     }
@@ -160,13 +131,11 @@ class _MainAppState extends State<MainApp> {
                 currentScreen,
 
                 // --- 3D SPINNING LOGO BADGE ---
-                if (_activeTab != BottomTab.home)
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 18,
-                    left: _activeTab == BottomTab.favorites ? null : 8,
-                    right: _activeTab == BottomTab.favorites ? 12 : null,
-                    child: const SpinningRhemaLogo(size: 36, innerPadding: 6),
-                  ),
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 6,
+                  left: 4,
+                  child: const SpinningRhemaLogo(size: 36, innerPadding: 6),
+                ),
               ],
             ),
           ),

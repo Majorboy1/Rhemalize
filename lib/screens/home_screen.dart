@@ -24,6 +24,29 @@ class _HomeScreenState extends State<HomeScreen> {
   FilterCategory _selectedCategory = FilterCategory.all;
   FilterType _selectedType = FilterType.all;
 
+  // Feature: Scroll Controller to detect movement for the header shadow
+  final ScrollController _scrollController = ScrollController();
+  final ValueNotifier<bool> _isScrolling = ValueNotifier<bool>(false);
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(() {
+      if (_scrollController.offset > 5) {
+        if (!_isScrolling.value) _isScrolling.value = true;
+      } else {
+        if (_isScrolling.value) _isScrolling.value = false;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _isScrolling.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final sermonProvider = context.watch<SermonProvider>();
@@ -62,25 +85,41 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildHeader(authProvider, sermons),
           Padding(
             padding: const EdgeInsets.only(top: 220),
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(32),
-                  topRight: Radius.circular(32),
-                ),
-              ),
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _isScrolling,
+              builder: (context, scrolled, child) {
+                return Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(32),
+                      topRight: Radius.circular(32),
+                    ),
+                    // FEATURE: Subtle shadow that appears when scrolling
+                    boxShadow: scrolled
+                        ? [
+                            BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, -5))
+                          ]
+                        : [],
+                  ),
+                  child: child,
+                );
+              },
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
                 child: Column(
                   children: [
-                    // --- FIXED TOP SECTION ---
+                    // --- PERSISTENT ERROR DISPLAY ---
                     if (audioProvider.lastError != null) ...[
                       _buildPlaybackErrorCard(audioProvider),
                       const SizedBox(height: 16),
                     ],
 
+                    // --- CONTINUE LISTENING SECTION ---
                     if (resumeTarget != null &&
                         resumePosition > const Duration(seconds: 10)) ...[
                       _buildContinueListeningCard(
@@ -117,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     // --- SCROLLABLE LIST SECTION ---
                     Expanded(
                       child: ListView.builder(
+                        controller: _scrollController,
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.only(bottom: 100),
                         itemCount: filteredSermons.length,
@@ -167,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- WIDGET HELPER METHODS (UNCHANGED LOGIC) ---
+  // --- WIDGET HELPER METHODS ---
 
   Widget _buildPlaybackErrorCard(AudioProvider audioProvider) {
     return Container(
@@ -217,26 +257,18 @@ class _HomeScreenState extends State<HomeScreen> {
     AudioProvider audioProvider,
   ) {
     final progressText = _formatPosition(position);
-    final imageUrl = _resolveCoverImage(target.imageUrl);
 
     return InkWell(
       borderRadius: BorderRadius.circular(20),
       onTap: () {
         if (target.episode != null) {
           audioProvider.playEpisode(
-            target.sermon,
-            target.episode!,
-            allSermons,
-            PlaybackContext.home,
-            resumeFromSavedPosition: true,
-          );
+              target.sermon, target.episode!, allSermons, PlaybackContext.home,
+              resumeFromSavedPosition: true);
         } else {
           audioProvider.playSermon(
-            target.sermon,
-            allSermons,
-            PlaybackContext.home,
-            resumeFromSavedPosition: true,
-          );
+              target.sermon, allSermons, PlaybackContext.home,
+              resumeFromSavedPosition: true);
         }
       },
       child: Container(
@@ -257,12 +289,11 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(16),
-                image: imageUrl != null && imageUrl.isNotEmpty
-                    ? DecorationImage(
-                        image: NetworkImage(imageUrl), fit: BoxFit.cover)
-                    : const DecorationImage(
-                        image: AssetImage('assets/images/rhema-logo.png'),
-                        fit: BoxFit.cover),
+                // CHANGED: Fixed to use Rhema logo directly as per your request
+                image: const DecorationImage(
+                  image: AssetImage('assets/images/rhema-logo.png'),
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -448,33 +479,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- UTILS ---
-
-  String? _resolveCoverImage(String? imageUrl) {
-    if (imageUrl == null || imageUrl.trim().isEmpty) return null;
-    if (imageUrl.contains('via.placeholder.com')) return null;
-    return imageUrl.trim();
-  }
-
   _ResumeTarget? _findResumeTarget(List<Sermon> sermons, String? contentId) {
     if (contentId == null || contentId.isEmpty) return null;
     for (final sermon in sermons) {
-      if (sermon.id == contentId)
+      if (sermon.id == contentId) {
         return _ResumeTarget(
             contentId: sermon.id,
             sermon: sermon,
             title: sermon.title,
-            subtitle: sermon.speaker,
-            imageUrl: sermon.imageUrl);
+            subtitle: sermon.speaker);
+      }
       for (final ep in sermon.episodes) {
-        if (ep.id == contentId)
+        if (ep.id == contentId) {
           return _ResumeTarget(
               contentId: ep.id,
               sermon: sermon,
               episode: ep,
               title: ep.title,
-              subtitle: '${sermon.title} - ${ep.speaker}',
-              imageUrl: ep.imageUrl ?? sermon.imageUrl);
+              subtitle: '${sermon.title} - ${ep.speaker}');
+        }
       }
     }
     return null;
@@ -492,7 +515,6 @@ class _StaticRhemaLogo extends StatelessWidget {
   const _StaticRhemaLogo({required this.size, required this.innerPadding});
   final double size;
   final double innerPadding;
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -503,24 +525,23 @@ class _StaticRhemaLogo extends StatelessWidget {
           color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
       child: Image.asset('assets/images/rhema-logo.png',
           fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) =>
-              const Icon(Icons.auto_awesome, color: Colors.amber, size: 28)),
+          errorBuilder: (c, e, s) =>
+              const Icon(Icons.auto_awesome, color: Colors.amber)),
     );
   }
 }
 
 class _ResumeTarget {
-  const _ResumeTarget(
-      {required this.contentId,
-      required this.sermon,
-      required this.title,
-      required this.subtitle,
-      this.episode,
-      this.imageUrl});
+  const _ResumeTarget({
+    required this.contentId,
+    required this.sermon,
+    required this.title,
+    required this.subtitle,
+    this.episode,
+  });
   final String contentId;
   final Sermon sermon;
   final Episode? episode;
   final String title;
   final String subtitle;
-  final String? imageUrl;
 }

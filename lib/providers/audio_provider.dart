@@ -210,8 +210,7 @@ class AudioProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('$_positionPrefix$id');
   }
-
-  // ================= STREAK & FIRESTORE LOGIC =================
+// ================= STREAK & FIRESTORE LOGIC =================
 
   void _handleNewPlay(String id,
       {bool isEpisode = false, String? parentSermonId}) {
@@ -225,6 +224,7 @@ class AudioProvider with ChangeNotifier {
   }
 
   void _commitPendingHistoryIfNeeded() {
+    // This is called by the positionStream listener in _listenToStates
     if (_pendingHistoryCommitted || _position.inSeconds < 30) return;
 
     final trackId = _pendingHistoryTrackId;
@@ -232,31 +232,45 @@ class AudioProvider with ChangeNotifier {
     if (trackId == null || sermonId == null) return;
 
     _pendingHistoryCommitted = true;
+
+    // Update local state
     _playedOrder.remove(sermonId);
     _playedOrder.insert(0, sermonId);
     _playedIds.add(sermonId);
     _resumePositions[trackId] = _position.inMilliseconds;
     _lastResumableId = trackId;
 
+    // Trigger persistent save immediately
     unawaited(_persistCommittedHistory(trackId, sermonId));
   }
 
+  // Saves the specific ID of the track that was just played
+  // so the "Continue Listening" card can find it later.
+  Future<void> _saveLastResumableId(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    _lastResumableId = id; // Update local variable
+    await prefs.setString(_lastResumeKey, id);
+    notifyListeners();
+  }
+
   Future<void> _persistCommittedHistory(String trackId, String sermonId) async {
+    // 1. Save the list of IDs and the order to SharedPreferences
     await _savePlayedHistory();
+
+    // 2. Save the specific track ID so it shows in the "Resume" card
     await _saveLastResumableId(trackId);
+
+    // 3. Update the date and Firestore stats
     await _updateLastListenDate();
     await _updateStreakInFirestore();
+
     _recordListenToFirestore(
       trackId,
       _pendingHistoryIsEpisode,
       parentSermonId: _pendingHistoryIsEpisode ? sermonId : null,
     );
-    notifyListeners();
-  }
 
-  Future<void> _saveLastResumableId(String id) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastResumeKey, id);
+    notifyListeners();
   }
 
   Future<void> _updateStreakInFirestore() async {
@@ -394,9 +408,8 @@ class AudioProvider with ChangeNotifier {
     _currentEpisode = null;
     _handleNewPlay(sermon.id, isEpisode: false);
 
-    final playableSermons = _session!.originalList
-        .where((s) => s.audioUrl.isNotEmpty)
-        .toList();
+    final playableSermons =
+        _session!.originalList.where((s) => s.audioUrl.isNotEmpty).toList();
     if (playableSermons.isEmpty) {
       return;
     }
@@ -450,8 +463,8 @@ class AudioProvider with ChangeNotifier {
                   album: series.title,
                   title: e.title,
                   artist: e.speaker,
-                  artUri: Uri.parse(
-                      _resolveArtUrl(e.imageUrl, series.imageUrl))),
+                  artUri:
+                      Uri.parse(_resolveArtUrl(e.imageUrl, series.imageUrl))),
             ))
         .toList();
 
@@ -676,7 +689,3 @@ class AudioProvider with ChangeNotifier {
     }
   }
 }
-
-
-
-
