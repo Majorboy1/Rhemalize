@@ -6,6 +6,7 @@ import '../providers/audio_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../providers/sermon_provider.dart';
 import '../utils/app_colors.dart';
+import 'series_detail_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -38,8 +39,9 @@ class _SearchScreenState extends State<SearchScreen> {
     _searchHistory
         .removeWhere((item) => item.toLowerCase() == term.toLowerCase());
     _searchHistory.insert(0, term);
-    if (_searchHistory.length > 5)
+    if (_searchHistory.length > 5) {
       _searchHistory = _searchHistory.sublist(0, 5);
+    }
     await prefs.setStringList('search_history', _searchHistory);
     setState(() {});
   }
@@ -69,7 +71,7 @@ class _SearchScreenState extends State<SearchScreen> {
             Expanded(
               child: searchQuery.isEmpty
                   ? _buildDefaultState(allSermons, audio, isDark)
-                  : _buildResultsList(results, audio, favs, isDark),
+                  : _buildResultsList(results, allSermons, audio, favs, isDark),
             ),
           ],
         ),
@@ -95,10 +97,10 @@ class _SearchScreenState extends State<SearchScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Explore",
+            'Explore',
             style: TextStyle(
               fontSize: 32,
-              fontWeight: FontWeight.w900, // Fixed: Changed .black to .w900
+              fontWeight: FontWeight.w900,
               letterSpacing: -1,
               color: isDark ? Colors.white : Colors.black,
             ),
@@ -119,13 +121,14 @@ class _SearchScreenState extends State<SearchScreen> {
               onChanged: (v) => setState(() => searchQuery = v),
               style: const TextStyle(fontSize: 15),
               decoration: InputDecoration(
-                hintText: "Search titles or pastors...",
-                prefixIcon: const Icon(Icons.search_rounded,
-                    color: AppColors.primaryPurple),
+                hintText: 'Search titles or pastors...',
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: AppColors.primaryPurple,
+                ),
                 filled: true,
-                fillColor: isDark
-                    ? Colors.white.withOpacity(0.06)
-                    : Colors.grey.shade50,
+                fillColor:
+                    isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade50,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 border: OutlineInputBorder(
@@ -148,14 +151,19 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildResultsList(List<Sermon> results, AudioProvider audio,
-      FavoritesProvider favs, bool isDark) {
+  Widget _buildResultsList(
+    List<Sermon> results,
+    List<Sermon> allSermons,
+    AudioProvider audio,
+    FavoritesProvider favs,
+    bool isDark,
+  ) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       itemCount: results.length,
       itemBuilder: (context, index) {
         final sermon = results[index];
-        final isSeries = sermon.category == SermonCategory.sunday;
+        final isSeries = sermon.messageType == MessageType.series;
         final accentColor =
             isSeries ? AppColors.primaryPurple : Colors.orangeAccent;
 
@@ -183,8 +191,25 @@ class _SearchScreenState extends State<SearchScreen> {
               child: InkWell(
                 onTap: () {
                   _addToHistory(searchQuery);
-                  audio.playSermon(sermon, results.cast<Sermon>(),
-                      PlaybackContext.home); // Fixed: Added cast<Sermon>()
+                  if (isSeries) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SeriesDetailPage(
+                          series: sermon,
+                          onBack: () => Navigator.pop(context),
+                          allSermons: allSermons,
+                          playedSermons: audio.playedSermonIds,
+                        ),
+                      ),
+                    );
+                  } else {
+                    audio.playSermon(
+                      sermon,
+                      results.cast<Sermon>(),
+                      PlaybackContext.home,
+                    );
+                  }
                 },
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -214,10 +239,11 @@ class _SearchScreenState extends State<SearchScreen> {
                                 color: accentColor,
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                    color: isDark
-                                        ? const Color(0xFF1A1A1A)
-                                        : Colors.white,
-                                    width: 2),
+                                  color: isDark
+                                      ? const Color(0xFF1A1A1A)
+                                      : Colors.white,
+                                  width: 2,
+                                ),
                               ),
                             ),
                           ),
@@ -229,7 +255,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isSeries ? "SERIES" : "MESSAGE",
+                              isSeries ? 'SERIES' : 'SINGLE',
                               style: TextStyle(
                                 color: accentColor,
                                 fontSize: 10,
@@ -241,18 +267,22 @@ class _SearchScreenState extends State<SearchScreen> {
                             Text(
                               sermon.title,
                               style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 17),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              sermon.speaker,
+                              isSeries
+                                  ? '${sermon.speaker} - ${sermon.episodes.length} episodes'
+                                  : '${sermon.speaker} - Single Message',
                               style: TextStyle(
-                                  color: isDark
-                                      ? Colors.white60
-                                      : Colors.grey.shade600,
-                                  fontSize: 14),
+                                color:
+                                    isDark ? Colors.white60 : Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         ),
@@ -285,11 +315,10 @@ class _SearchScreenState extends State<SearchScreen> {
       physics: const BouncingScrollPhysics(),
       children: [
         if (_searchHistory.isNotEmpty) _buildHistoryChips(isDark),
-        _buildSectionTitle("Popular Searches", isDark),
+        _buildSectionTitle('Popular Searches', isDark),
         ...all
             .take(5)
-            .map((s) => _buildSimpleDiscoveryCard(s, audio, isDark))
-            .toList(),
+            .map((s) => _buildSimpleDiscoveryCard(s, all, audio, isDark)),
       ],
     );
   }
@@ -307,18 +336,24 @@ class _SearchScreenState extends State<SearchScreen> {
             return Padding(
               padding: const EdgeInsets.only(right: 10),
               child: ActionChip(
-                label: Text(_searchHistory[index],
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500)),
+                label: Text(
+                  _searchHistory[index],
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 onPressed: () =>
                     setState(() => searchQuery = _searchHistory[index]),
                 backgroundColor:
                     isDark ? const Color(0xFF222222) : Colors.white,
                 elevation: 0,
                 side: BorderSide(
-                    color: isDark ? Colors.white10 : Colors.grey.shade200),
+                  color: isDark ? Colors.white10 : Colors.grey.shade200,
+                ),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             );
           },
@@ -333,14 +368,20 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Text(
         title,
         style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            color: isDark ? Colors.white : Colors.black87),
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          color: isDark ? Colors.white : Colors.black87,
+        ),
       ),
     );
   }
 
-  Widget _buildSimpleDiscoveryCard(Sermon s, AudioProvider audio, bool isDark) {
+  Widget _buildSimpleDiscoveryCard(
+    Sermon s,
+    List<Sermon> allSermons,
+    AudioProvider audio,
+    bool isDark,
+  ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       decoration: BoxDecoration(
@@ -351,16 +392,47 @@ class _SearchScreenState extends State<SearchScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(10),
-          child: Image.asset('assets/images/rhema-logo.png',
-              width: 48, height: 48, fit: BoxFit.cover),
+          child: Image.asset(
+            'assets/images/rhema-logo.png',
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+          ),
         ),
-        title: Text(s.title,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-        subtitle: Text(s.speaker,
-            style: const TextStyle(fontSize: 13, color: Colors.grey)),
-        trailing: const Icon(Icons.play_circle_fill_rounded,
-            color: AppColors.primaryPurple, size: 32),
-        onTap: () => audio.playSermon(s, [s], PlaybackContext.home),
+        title: Text(
+          s.title,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        ),
+        subtitle: Text(
+          s.messageType == MessageType.series
+              ? '${s.speaker} - Series - ${s.episodes.length} episodes'
+              : '${s.speaker} - Single Message',
+          style: const TextStyle(fontSize: 13, color: Colors.grey),
+        ),
+        trailing: Icon(
+          s.messageType == MessageType.series
+              ? Icons.arrow_forward_ios_rounded
+              : Icons.play_circle_fill_rounded,
+          color: AppColors.primaryPurple,
+          size: s.messageType == MessageType.series ? 20 : 32,
+        ),
+        onTap: () {
+          if (s.messageType == MessageType.series) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SeriesDetailPage(
+                  series: s,
+                  onBack: () => Navigator.pop(context),
+                  allSermons: allSermons,
+                  playedSermons: audio.playedSermonIds,
+                ),
+              ),
+            );
+          } else {
+            audio.playSermon(s, [s], PlaybackContext.home);
+          }
+        },
       ),
     );
   }

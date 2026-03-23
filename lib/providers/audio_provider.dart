@@ -409,10 +409,7 @@ class AudioProvider with ChangeNotifier {
                   album: s.seriesTitle ?? "Rhemalize",
                   title: s.title,
                   artist: s.speaker,
-                  artUri: Uri.parse(
-                      (s.imageUrl != null && s.imageUrl!.isNotEmpty)
-                          ? s.imageUrl!
-                          : _fallbackArt)),
+                  artUri: Uri.parse(_resolveArtUrl(s.imageUrl))),
             ))
         .toList();
 
@@ -454,9 +451,7 @@ class AudioProvider with ChangeNotifier {
                   title: e.title,
                   artist: e.speaker,
                   artUri: Uri.parse(
-                      (e.imageUrl != null && e.imageUrl!.isNotEmpty)
-                          ? e.imageUrl!
-                          : (series.imageUrl ?? _fallbackArt))),
+                      _resolveArtUrl(e.imageUrl, series.imageUrl))),
             ))
         .toList();
 
@@ -579,6 +574,18 @@ class AudioProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  bool _isValidImageUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return false;
+    final normalized = url.trim().toLowerCase();
+    return !normalized.contains('via.placeholder.com');
+  }
+
+  String _resolveArtUrl(String? primary, [String? secondary]) {
+    if (_isValidImageUrl(primary)) return primary!.trim();
+    if (_isValidImageUrl(secondary)) return secondary!.trim();
+    return _fallbackArt;
+  }
+
   String _convertToDirectLink(String? url) {
     if (url == null || !url.contains('drive.google.com')) return url ?? "";
     final regExp = RegExp(r'\/d\/([a-zA-Z0-9_-]+)');
@@ -669,6 +676,7 @@ class AudioProvider with ChangeNotifier {
     }
   }
 }
+
 
 
 

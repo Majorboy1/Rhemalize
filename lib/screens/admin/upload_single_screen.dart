@@ -71,7 +71,7 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
             audioFile: _audioFile,
             audioBytes: _webAudioBytes,
             imageUrl: _imageController.text.isEmpty
-                ? "https://via.placeholder.com/150"
+                ? ""
                 : _imageController.text,
             category: _selectedCategory,
             onProgress: (progress) {
@@ -122,7 +122,7 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : Colors.black87)),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   _buildTextField(
                       _titleController, "Title", Icons.title, fieldBg, isDark),
                   _buildTextField(_imageController, "Image URL", Icons.image,
@@ -195,7 +195,7 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
       Color bg, bool isDark,
       {int maxLines = 1}) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(12),
@@ -223,7 +223,7 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
       borderRadius: BorderRadius.circular(15),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(30),
+        padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
             color:
                 hasFile ? Colors.green.withOpacity(0.05) : Colors.transparent,
@@ -274,3 +274,5 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
     );
   }
 }
+
+

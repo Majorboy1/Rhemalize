@@ -94,7 +94,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
 
     try {
       final String finalImageUrl = _imageUrlController.text.trim().isEmpty
-          ? 'https://via.placeholder.com/300'
+          ? ''
           : _imageUrlController.text.trim();
 
       if (_selectedMessageType == MessageType.series) {
@@ -430,7 +430,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
 
   Widget _buildSpeakerDropdown(Color bgColor, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 16),
       child: DropdownButtonFormField<String>(
         isExpanded: true,
         value: _selectedSpeaker,
@@ -456,7 +456,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
 
     return Card(
       key: ValueKey(draft.id),
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 20),
       color: isDark ? Colors.white.withOpacity(0.02) : Colors.white,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -490,14 +490,14 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
                   ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
             _buildTextField(draft.titleController, 'Episode Title',
                 Icons.subtitles_outlined, bgColor, isDark),
-            const SizedBox(height: 2),
+            const SizedBox(height: 10),
             InkWell(
               onTap: () => _pickAudioForEpisode(index),
               child: Container(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   color: draft.fileName != null
                       ? Colors.green.withOpacity(0.05)
@@ -585,3 +585,5 @@ class EpisodeDraft {
     titleController.dispose();
   }
 }
+
+

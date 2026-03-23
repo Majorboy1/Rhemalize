@@ -52,7 +52,7 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
             description: _descController.text.trim(),
             audioFile: _selectedAudioFile,
             audioBytes: _webAudioBytes,
-            imageUrl: 'https://via.placeholder.com/150',
+            imageUrl: '',
             category: _selectedCategory,
             onProgress: (p) => setState(() => _uploadProgress = p),
           );
@@ -124,7 +124,7 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : Colors.black)),
-            const SizedBox(height: 25),
+            const SizedBox(height: 28),
             _buildSectionLabel('MESSAGE DETAILS'),
             _buildField(_titleController, 'Message Title', Icons.title, isDark),
             const SizedBox(height: 10),
@@ -147,7 +147,7 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
   }
 
   Widget _buildSectionLabel(String label) => Padding(
-        padding: const EdgeInsets.only(bottom: 8, left: 4),
+        padding: const EdgeInsets.only(bottom: 10, left: 4, top: 2),
         child: Text(label,
             style: const TextStyle(
                 fontSize: 10,
@@ -361,3 +361,5 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
     );
   }
 }
+
+

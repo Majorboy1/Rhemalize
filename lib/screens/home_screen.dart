@@ -71,8 +71,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: ListView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(bottom: 100),
                   children: [
                     if (audioProvider.lastError != null) ...[
                       _buildPlaybackErrorCard(audioProvider),
@@ -101,45 +102,45 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Expanded(
-                      child: ListView.separated(
-                        padding: const EdgeInsets.only(bottom: 100),
-                        itemCount: filteredSermons.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 16),
-                        itemBuilder: (context, index) {
-                          final sermon = filteredSermons[index];
-                          return SermonCard(
-                            sermon: sermon,
-                            isFavorite: favoritesProvider.isFavorite(sermon.id),
-                            isPlayed: playedIds.contains(sermon.id),
-                            onToggleFavorite: () =>
-                                favoritesProvider.toggleFavorite(sermon.id),
-                            onPlay: () {
-                              final audioPro = context.read<AudioProvider>();
-                              if (sermon.messageType == MessageType.series) {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SeriesDetailPage(
-                                      series: sermon,
-                                      allSermons:
-                                          sermons, // FIXED: Added required argument
-                                      onBack: () => Navigator.pop(context),
-                                      playedSermons: playedIds,
-                                      // FIXED: Removed undefined onPlayEpisode parameter
-                                    ),
+                    ...List.generate(filteredSermons.length, (index) {
+                      final sermon = filteredSermons[index];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: index == filteredSermons.length - 1 ? 0 : 16,
+                        ),
+                        child: SermonCard(
+                          sermon: sermon,
+                          isFavorite: favoritesProvider.isFavorite(sermon.id),
+                          isPlayed: playedIds.contains(sermon.id),
+                          onToggleFavorite: () =>
+                              favoritesProvider.toggleFavorite(sermon.id),
+                          onPlay: () {
+                            final audioPro = context.read<AudioProvider>();
+                            if (sermon.messageType == MessageType.series) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SeriesDetailPage(
+                                    series: sermon,
+                                    allSermons: sermons,
+                                    onBack: () => Navigator.pop(context),
+                                    playedSermons: playedIds,
                                   ),
-                                );
-                              } else {
-                                audioPro.playSermon(sermon, filteredSermons,
-                                    PlaybackContext.home);
-                              }
-                            },
-                          );
-                        },
-                      ),
-                    ),
+                                ),
+                              );
+                            } else {
+                              audioPro.playSermon(
+                                sermon,
+                                filteredSermons,
+                                PlaybackContext.home,
+                              );
+                            }
+                          },
+                        ),
+                      );
+                    }),
                   ],
+                ),
                 ),
               ),
             ),
@@ -200,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
     List<Sermon> allSermons,
     AudioProvider audioProvider,
   ) {
-    final progressText = _formatPosition(position);
+    final imageUrl = _resolveCoverImage(target.imageUrl);
     final imageUrl = target.imageUrl;
 
     return InkWell(
@@ -247,17 +248,17 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 56,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(16),
                 image: imageUrl != null && imageUrl.isNotEmpty
                     ? DecorationImage(
                         image: NetworkImage(imageUrl),
                         fit: BoxFit.cover,
                       )
-                    : null,
+                    : const DecorationImage(
+                        image: AssetImage('assets/images/rhema-logo.png'),
+                        fit: BoxFit.cover,
+                      ),
               ),
-              child: imageUrl == null || imageUrl.isEmpty
-                  ? const Icon(Icons.play_circle_fill_rounded,
-                      color: Colors.white, size: 30)
+              child: null,
                   : null,
             ),
             const SizedBox(width: 14),
@@ -286,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${target.subtitle} â€¢ $progressText',
+                    '${target.subtitle} • $progressText',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.white70),
@@ -301,10 +302,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+  String? _resolveCoverImage(String? imageUrl) {
+    if (imageUrl == null || imageUrl.trim().isEmpty) return null;
+    final normalized = imageUrl.trim().toLowerCase();
+    if (normalized.contains('via.placeholder.com')) return null;
+    return imageUrl.trim();
+  }
+
 
   _ResumeTarget? _findResumeTarget(List<Sermon> sermons, String? contentId) {
     if (contentId == null || contentId.isEmpty) return null;
-
+          imageUrl: _resolveCoverImage(sermon.imageUrl),
     for (final sermon in sermons) {
       if (sermon.id == contentId) {
         return _ResumeTarget(
@@ -316,14 +324,14 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
 
-      for (final episode in sermon.episodes) {
+            imageUrl: _resolveCoverImage(episode.imageUrl ?? sermon.imageUrl),
         if (episode.id == contentId) {
           return _ResumeTarget(
             contentId: episode.id,
             sermon: sermon,
             episode: episode,
             title: episode.title,
-            subtitle: '${sermon.title} â€¢ ${episode.speaker}',
+            subtitle: '${sermon.title} • ${episode.speaker}',
             imageUrl: episode.imageUrl ?? sermon.imageUrl,
           );
         }
