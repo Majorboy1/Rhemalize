@@ -10,6 +10,7 @@ import '../utils/app_colors.dart';
 import '../widgets/sermon_card.dart';
 
 enum FilterCategory { all, sunday, wednesday }
+
 enum FilterType { all, series, single }
 
 class HomeScreen extends StatefulWidget {
@@ -33,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sermons = sermonProvider.sermons;
     final playedIds = audioProvider.playedSermonIds;
+
     final resumeTarget =
         _findResumeTarget(sermons, audioProvider.lastResumableId);
     final resumePosition = resumeTarget == null
@@ -71,14 +73,14 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.only(bottom: 100),
+                child: Column(
                   children: [
+                    // --- FIXED TOP SECTION ---
                     if (audioProvider.lastError != null) ...[
                       _buildPlaybackErrorCard(audioProvider),
                       const SizedBox(height: 16),
                     ],
+
                     if (resumeTarget != null &&
                         resumePosition > const Duration(seconds: 10)) ...[
                       _buildContinueListeningCard(
@@ -89,8 +91,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 20),
                     ],
+
                     _buildFilters(sermons, isDark),
+
                     const SizedBox(height: 24),
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -108,43 +113,50 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    ...List.generate(filteredSermons.length, (index) {
-                      final sermon = filteredSermons[index];
-                      return Padding(
-                        padding: EdgeInsets.only(
-                          bottom: index == filteredSermons.length - 1 ? 0 : 16,
-                        ),
-                        child: SermonCard(
-                          sermon: sermon,
-                          isFavorite: favoritesProvider.isFavorite(sermon.id),
-                          isPlayed: playedIds.contains(sermon.id),
-                          onToggleFavorite: () =>
-                              favoritesProvider.toggleFavorite(sermon.id),
-                          onPlay: () {
-                            final audioPro = context.read<AudioProvider>();
-                            if (sermon.messageType == MessageType.series) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => SeriesDetailPage(
-                                    series: sermon,
-                                    allSermons: sermons,
-                                    onBack: () => Navigator.pop(context),
-                                    playedSermons: playedIds,
-                                  ),
-                                ),
-                              );
-                            } else {
-                              audioPro.playSermon(
-                                sermon,
-                                filteredSermons,
-                                PlaybackContext.home,
-                              );
-                            }
-                          },
-                        ),
-                      );
-                    }),
+
+                    // --- SCROLLABLE LIST SECTION ---
+                    Expanded(
+                      child: ListView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 100),
+                        itemCount: filteredSermons.length,
+                        itemBuilder: (context, index) {
+                          final sermon = filteredSermons[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: SermonCard(
+                              sermon: sermon,
+                              isFavorite:
+                                  favoritesProvider.isFavorite(sermon.id),
+                              isPlayed: playedIds.contains(sermon.id),
+                              onToggleFavorite: () =>
+                                  favoritesProvider.toggleFavorite(sermon.id),
+                              onPlay: () {
+                                if (sermon.messageType == MessageType.series) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SeriesDetailPage(
+                                        series: sermon,
+                                        allSermons: sermons,
+                                        onBack: () => Navigator.pop(context),
+                                        playedSermons: playedIds,
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  context.read<AudioProvider>().playSermon(
+                                        sermon,
+                                        filteredSermons,
+                                        PlaybackContext.home,
+                                      );
+                                }
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -154,6 +166,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // --- WIDGET HELPER METHODS (UNCHANGED LOGIC) ---
 
   Widget _buildPlaybackErrorCard(AudioProvider audioProvider) {
     return Container(
@@ -167,20 +181,15 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: Colors.redAccent,
-            size: 22,
-          ),
+          const Icon(Icons.error_outline_rounded,
+              color: Colors.redAccent, size: 22),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Playback Problem',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+                const Text('Playback Problem',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(
                   audioProvider.lastError ?? 'Unknown playback error',
@@ -239,13 +248,6 @@ class _HomeScreenState extends State<HomeScreen> {
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF32175E).withOpacity(0.24),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
         ),
         child: Row(
           children: [
@@ -257,13 +259,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 borderRadius: BorderRadius.circular(16),
                 image: imageUrl != null && imageUrl.isNotEmpty
                     ? DecorationImage(
-                        image: NetworkImage(imageUrl),
-                        fit: BoxFit.cover,
-                      )
+                        image: NetworkImage(imageUrl), fit: BoxFit.cover)
                     : const DecorationImage(
                         image: AssetImage('assets/images/rhema-logo.png'),
-                        fit: BoxFit.cover,
-                      ),
+                        fit: BoxFit.cover),
               ),
             ),
             const SizedBox(width: 14),
@@ -271,88 +270,32 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Continue Listening',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  const Text('Continue Listening',
+                      style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  Text(
-                    target.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text(target.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(height: 2),
-                  Text(
-                    '${target.subtitle} - $progressText',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white70),
-                  ),
+                  Text('${target.subtitle} - $progressText',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70)),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
             const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 32),
           ],
         ),
       ),
     );
-  }
-
-  String? _resolveCoverImage(String? imageUrl) {
-    if (imageUrl == null || imageUrl.trim().isEmpty) return null;
-    final normalized = imageUrl.trim().toLowerCase();
-    if (normalized.contains('via.placeholder.com')) return null;
-    return imageUrl.trim();
-  }
-
-  _ResumeTarget? _findResumeTarget(List<Sermon> sermons, String? contentId) {
-    if (contentId == null || contentId.isEmpty) return null;
-
-    for (final sermon in sermons) {
-      if (sermon.id == contentId) {
-        return _ResumeTarget(
-          contentId: sermon.id,
-          sermon: sermon,
-          title: sermon.title,
-          subtitle: sermon.speaker,
-          imageUrl: _resolveCoverImage(sermon.imageUrl),
-        );
-      }
-
-      for (final episode in sermon.episodes) {
-        if (episode.id == contentId) {
-          return _ResumeTarget(
-            contentId: episode.id,
-            sermon: sermon,
-            episode: episode,
-            title: episode.title,
-            subtitle: '${sermon.title} - ${episode.speaker}',
-            imageUrl: _resolveCoverImage(
-              episode.imageUrl ?? sermon.imageUrl,
-            ),
-          );
-        }
-      }
-    }
-
-    return null;
-  }
-
-  String _formatPosition(Duration position) {
-    final hours = position.inHours;
-    final minutes = position.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = position.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
   }
 
   Widget _buildHeader(AuthProvider authProvider, List<Sermon> sermons) {
@@ -367,28 +310,21 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Rhemalize',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      "Hear God's Word Today",
-                      style: TextStyle(color: Colors.white.withOpacity(0.7)),
-                    ),
+                    Text('Rhemalize',
+                        style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
+                    Text("Hear God's Word Today",
+                        style: TextStyle(color: Colors.white70)),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
               const _StaticRhemaLogo(size: 42, innerPadding: 7),
             ],
           ),
@@ -416,18 +352,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white70, fontSize: 11),
-            ),
+            Text(value,
+                style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
+            Text(label,
+                style: const TextStyle(color: Colors.white70, fontSize: 11)),
           ],
         ),
       ),
@@ -444,52 +375,41 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Row(
           children: [
-            _filterChip(
-              'All',
-              _selectedCategory == FilterCategory.all,
-              isDark,
-              () => setState(() => _selectedCategory = FilterCategory.all),
-            ),
+            _filterChip('All', _selectedCategory == FilterCategory.all, isDark,
+                () => setState(() => _selectedCategory = FilterCategory.all)),
             const SizedBox(width: 8),
             _filterChip(
-              'Sunday',
-              _selectedCategory == FilterCategory.sunday,
-              isDark,
-              () => setState(() => _selectedCategory = FilterCategory.sunday),
-            ),
+                'Sunday',
+                _selectedCategory == FilterCategory.sunday,
+                isDark,
+                () =>
+                    setState(() => _selectedCategory = FilterCategory.sunday)),
             const SizedBox(width: 8),
             _filterChip(
-              'Wednesday',
-              _selectedCategory == FilterCategory.wednesday,
-              isDark,
-              () =>
-                  setState(() => _selectedCategory = FilterCategory.wednesday),
-            ),
+                'Wednesday',
+                _selectedCategory == FilterCategory.wednesday,
+                isDark,
+                () => setState(
+                    () => _selectedCategory = FilterCategory.wednesday)),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            _filterChip(
-              'All Types',
-              _selectedType == FilterType.all,
-              isDark,
-              () => setState(() => _selectedType = FilterType.all),
-            ),
+            _filterChip('All Types', _selectedType == FilterType.all, isDark,
+                () => setState(() => _selectedType = FilterType.all)),
             const SizedBox(width: 8),
             _filterChip(
-              'Series ($seriesCount)',
-              _selectedType == FilterType.series,
-              isDark,
-              () => setState(() => _selectedType = FilterType.series),
-            ),
+                'Series ($seriesCount)',
+                _selectedType == FilterType.series,
+                isDark,
+                () => setState(() => _selectedType = FilterType.series)),
             const SizedBox(width: 8),
             _filterChip(
-              'Single ($singleCount)',
-              _selectedType == FilterType.single,
-              isDark,
-              () => setState(() => _selectedType = FilterType.single),
-            ),
+                'Single ($singleCount)',
+                _selectedType == FilterType.single,
+                isDark,
+                () => setState(() => _selectedType = FilterType.single)),
           ],
         ),
       ],
@@ -497,11 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _filterChip(
-    String text,
-    bool isActive,
-    bool isDark,
-    VoidCallback onTap,
-  ) {
+      String text, bool isActive, bool isDark, VoidCallback onTap) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -520,8 +436,7 @@ class _HomeScreenState extends State<HomeScreen> {
               text,
               style: TextStyle(
                 fontSize: 11,
-                fontWeight:
-                    isActive ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                 color: isActive
                     ? Colors.white
                     : (isDark ? Colors.white70 : AppColors.primaryPurple),
@@ -532,14 +447,49 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  // --- UTILS ---
+
+  String? _resolveCoverImage(String? imageUrl) {
+    if (imageUrl == null || imageUrl.trim().isEmpty) return null;
+    if (imageUrl.contains('via.placeholder.com')) return null;
+    return imageUrl.trim();
+  }
+
+  _ResumeTarget? _findResumeTarget(List<Sermon> sermons, String? contentId) {
+    if (contentId == null || contentId.isEmpty) return null;
+    for (final sermon in sermons) {
+      if (sermon.id == contentId)
+        return _ResumeTarget(
+            contentId: sermon.id,
+            sermon: sermon,
+            title: sermon.title,
+            subtitle: sermon.speaker,
+            imageUrl: sermon.imageUrl);
+      for (final ep in sermon.episodes) {
+        if (ep.id == contentId)
+          return _ResumeTarget(
+              contentId: ep.id,
+              sermon: sermon,
+              episode: ep,
+              title: ep.title,
+              subtitle: '${sermon.title} - ${ep.speaker}',
+              imageUrl: ep.imageUrl ?? sermon.imageUrl);
+      }
+    }
+    return null;
+  }
+
+  String _formatPosition(Duration position) {
+    final hours = position.inHours;
+    final minutes = position.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = position.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
+  }
 }
 
 class _StaticRhemaLogo extends StatelessWidget {
-  const _StaticRhemaLogo({
-    required this.size,
-    required this.innerPadding,
-  });
-
+  const _StaticRhemaLogo({required this.size, required this.innerPadding});
   final double size;
   final double innerPadding;
 
@@ -550,36 +500,23 @@ class _StaticRhemaLogo extends StatelessWidget {
       width: size,
       padding: EdgeInsets.all(innerPadding),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 12,
-            spreadRadius: 2,
-          )
-        ],
-      ),
-      child: Image.asset(
-        'assets/images/rhema-logo.png',
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) =>
-            const Icon(Icons.auto_awesome, color: Colors.amber, size: 28),
-      ),
+          color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+      child: Image.asset('assets/images/rhema-logo.png',
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.auto_awesome, color: Colors.amber, size: 28)),
     );
   }
 }
 
 class _ResumeTarget {
-  const _ResumeTarget({
-    required this.contentId,
-    required this.sermon,
-    required this.title,
-    required this.subtitle,
-    this.episode,
-    this.imageUrl,
-  });
-
+  const _ResumeTarget(
+      {required this.contentId,
+      required this.sermon,
+      required this.title,
+      required this.subtitle,
+      this.episode,
+      this.imageUrl});
   final String contentId;
   final Sermon sermon;
   final Episode? episode;
