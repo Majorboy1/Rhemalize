@@ -24,6 +24,21 @@ service cloud.firestore {
       return adminByEmail() || adminByUserRole();
     }
 
+    function validSermonPlayCountUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return signedIn() &&
+        changed.hasOnly(['playCount']) &&
+        request.resource.data.playCount == resource.data.playCount + 1;
+    }
+
+    function validEpisodePlayCountUpdate() {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return signedIn() &&
+        changed.hasOnly(['playCount', 'episodes']) &&
+        request.resource.data.playCount == resource.data.playCount + 1 &&
+        request.resource.data.episodes.size() == resource.data.episodes.size();
+    }
+
     match /admins/{adminId} {
       allow read: if signedIn() && adminEmail() == adminId;
       allow write: if false;
@@ -43,7 +58,8 @@ service cloud.firestore {
 
     match /sermons/{sermonId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || validSermonPlayCountUpdate() || validEpisodePlayCountUpdate();
     }
 
     match /listens/{listenId} {

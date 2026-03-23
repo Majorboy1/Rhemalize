@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/sermon_provider.dart';
+import '../models/sermon.dart';
 import '../providers/audio_provider.dart';
-import '../providers/favorites_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/favorites_provider.dart';
+import '../providers/sermon_provider.dart';
+import '../screens/series_detail_screen.dart';
 import '../utils/app_colors.dart';
 import '../widgets/sermon_card.dart';
-import '../models/sermon.dart';
-import '../screens/series_detail_screen.dart'; // Ensure this matches your filename
 
 enum FilterCategory { all, sunday, wednesday }
-
 enum FilterType { all, series, single }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -40,12 +40,12 @@ class _HomeScreenState extends State<HomeScreen> {
         : audioProvider.getSavedPosition(resumeTarget.contentId);
 
     final filteredSermons = sermons.where((s) {
-      bool catMatch = _selectedCategory == FilterCategory.all ||
+      final catMatch = _selectedCategory == FilterCategory.all ||
           (s.category == SermonCategory.sunday &&
               _selectedCategory == FilterCategory.sunday) ||
           (s.category == SermonCategory.wednesday &&
               _selectedCategory == FilterCategory.wednesday);
-      bool typeMatch = _selectedType == FilterType.all ||
+      final typeMatch = _selectedType == FilterType.all ||
           (s.messageType == MessageType.series &&
               _selectedType == FilterType.series) ||
           (s.messageType == MessageType.single &&
@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.primaryPurple,
       body: Stack(
         children: [
-          _buildHeader(authProvider, sermons, isDark),
+          _buildHeader(authProvider, sermons),
           Padding(
             padding: const EdgeInsets.only(top: 220),
             child: Container(
@@ -94,11 +94,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('All Sermons',
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold)),
-                        Text('${filteredSermons.length} messages',
-                            style: const TextStyle(color: Colors.grey)),
+                        const Text(
+                          'All Sermons',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '${filteredSermons.length} messages',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -141,7 +147,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     }),
                   ],
                 ),
-                ),
               ),
             ),
           ),
@@ -149,8 +154,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // --- UI Helper Methods ---
 
   Widget _buildPlaybackErrorCard(AudioProvider audioProvider) {
     return Container(
@@ -164,8 +167,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.error_outline_rounded,
-              color: Colors.redAccent, size: 22),
+          const Icon(
+            Icons.error_outline_rounded,
+            color: Colors.redAccent,
+            size: 22,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -201,8 +207,8 @@ class _HomeScreenState extends State<HomeScreen> {
     List<Sermon> allSermons,
     AudioProvider audioProvider,
   ) {
+    final progressText = _formatPosition(position);
     final imageUrl = _resolveCoverImage(target.imageUrl);
-    final imageUrl = target.imageUrl;
 
     return InkWell(
       borderRadius: BorderRadius.circular(20),
@@ -248,6 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 56,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(16),
                 image: imageUrl != null && imageUrl.isNotEmpty
                     ? DecorationImage(
                         image: NetworkImage(imageUrl),
@@ -258,8 +265,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         fit: BoxFit.cover,
                       ),
               ),
-              child: null,
-                  : null,
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -287,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${target.subtitle} • $progressText',
+                    '${target.subtitle} - $progressText',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.white70),
@@ -302,6 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
   String? _resolveCoverImage(String? imageUrl) {
     if (imageUrl == null || imageUrl.trim().isEmpty) return null;
     final normalized = imageUrl.trim().toLowerCase();
@@ -309,10 +315,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return imageUrl.trim();
   }
 
-
   _ResumeTarget? _findResumeTarget(List<Sermon> sermons, String? contentId) {
     if (contentId == null || contentId.isEmpty) return null;
-          imageUrl: _resolveCoverImage(sermon.imageUrl),
+
     for (final sermon in sermons) {
       if (sermon.id == contentId) {
         return _ResumeTarget(
@@ -320,19 +325,21 @@ class _HomeScreenState extends State<HomeScreen> {
           sermon: sermon,
           title: sermon.title,
           subtitle: sermon.speaker,
-          imageUrl: sermon.imageUrl,
+          imageUrl: _resolveCoverImage(sermon.imageUrl),
         );
       }
 
-            imageUrl: _resolveCoverImage(episode.imageUrl ?? sermon.imageUrl),
+      for (final episode in sermon.episodes) {
         if (episode.id == contentId) {
           return _ResumeTarget(
             contentId: episode.id,
             sermon: sermon,
             episode: episode,
             title: episode.title,
-            subtitle: '${sermon.title} • ${episode.speaker}',
-            imageUrl: episode.imageUrl ?? sermon.imageUrl,
+            subtitle: '${sermon.title} - ${episode.speaker}',
+            imageUrl: _resolveCoverImage(
+              episode.imageUrl ?? sermon.imageUrl,
+            ),
           );
         }
       }
@@ -347,8 +354,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final seconds = position.inSeconds.remainder(60).toString().padLeft(2, '0');
     return hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds';
   }
-  Widget _buildHeader(
-      AuthProvider authProvider, List<Sermon> sermons, bool isDark) {
+
+  Widget _buildHeader(AuthProvider authProvider, List<Sermon> sermons) {
     final sundayCount =
         sermons.where((s) => s.category == SermonCategory.sunday).length;
     final wednesdayCount =
@@ -366,13 +373,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Rhemalize',
-                        style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white)),
-                    Text("Hear God's Word Today",
-                        style: TextStyle(color: Colors.white.withOpacity(0.7))),
+                    const Text(
+                      'Rhemalize',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      "Hear God's Word Today",
+                      style: TextStyle(color: Colors.white.withOpacity(0.7)),
+                    ),
                   ],
                 ),
               ),
@@ -398,17 +410,26 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(16)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(value,
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value,
               style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white)),
-          Text(label,
-              style: const TextStyle(color: Colors.white70, fontSize: 11)),
-        ]),
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -418,39 +439,69 @@ class _HomeScreenState extends State<HomeScreen> {
         sermons.where((s) => s.messageType == MessageType.series).length;
     final singleCount =
         sermons.where((s) => s.messageType == MessageType.single).length;
-    return Column(children: [
-      Row(children: [
-        _filterChip('All', _selectedCategory == FilterCategory.all, isDark,
-            () => setState(() => _selectedCategory = FilterCategory.all)),
-        const SizedBox(width: 8),
-        _filterChip(
-            'Sunday',
-            _selectedCategory == FilterCategory.sunday,
-            isDark,
-            () => setState(() => _selectedCategory = FilterCategory.sunday)),
-        const SizedBox(width: 8),
-        _filterChip(
-            'Wednesday',
-            _selectedCategory == FilterCategory.wednesday,
-            isDark,
-            () => setState(() => _selectedCategory = FilterCategory.wednesday)),
-      ]),
-      const SizedBox(height: 12),
-      Row(children: [
-        _filterChip('All Types', _selectedType == FilterType.all, isDark,
-            () => setState(() => _selectedType = FilterType.all)),
-        const SizedBox(width: 8),
-        _filterChip('Series ($seriesCount)', _selectedType == FilterType.series,
-            isDark, () => setState(() => _selectedType = FilterType.series)),
-        const SizedBox(width: 8),
-        _filterChip('Single ($singleCount)', _selectedType == FilterType.single,
-            isDark, () => setState(() => _selectedType = FilterType.single)),
-      ]),
-    ]);
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            _filterChip(
+              'All',
+              _selectedCategory == FilterCategory.all,
+              isDark,
+              () => setState(() => _selectedCategory = FilterCategory.all),
+            ),
+            const SizedBox(width: 8),
+            _filterChip(
+              'Sunday',
+              _selectedCategory == FilterCategory.sunday,
+              isDark,
+              () => setState(() => _selectedCategory = FilterCategory.sunday),
+            ),
+            const SizedBox(width: 8),
+            _filterChip(
+              'Wednesday',
+              _selectedCategory == FilterCategory.wednesday,
+              isDark,
+              () =>
+                  setState(() => _selectedCategory = FilterCategory.wednesday),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            _filterChip(
+              'All Types',
+              _selectedType == FilterType.all,
+              isDark,
+              () => setState(() => _selectedType = FilterType.all),
+            ),
+            const SizedBox(width: 8),
+            _filterChip(
+              'Series ($seriesCount)',
+              _selectedType == FilterType.series,
+              isDark,
+              () => setState(() => _selectedType = FilterType.series),
+            ),
+            const SizedBox(width: 8),
+            _filterChip(
+              'Single ($singleCount)',
+              _selectedType == FilterType.single,
+              isDark,
+              () => setState(() => _selectedType = FilterType.single),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _filterChip(
-      String text, bool isActive, bool isDark, VoidCallback onTap) {
+    String text,
+    bool isActive,
+    bool isDark,
+    VoidCallback onTap,
+  ) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -465,13 +516,17 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Center(
-            child: Text(text,
-                style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                    color: isActive
-                        ? Colors.white
-                        : (isDark ? Colors.white70 : AppColors.primaryPurple))),
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight:
+                    isActive ? FontWeight.bold : FontWeight.normal,
+                color: isActive
+                    ? Colors.white
+                    : (isDark ? Colors.white70 : AppColors.primaryPurple),
+              ),
+            ),
           ),
         ),
       ),
@@ -514,6 +569,7 @@ class _StaticRhemaLogo extends StatelessWidget {
     );
   }
 }
+
 class _ResumeTarget {
   const _ResumeTarget({
     required this.contentId,
