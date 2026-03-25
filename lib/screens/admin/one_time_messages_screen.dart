@@ -8,7 +8,6 @@ import '../../widgets/modals/edit_sermon_modal.dart';
 import '../../utils/dialog_utils.dart';
 
 enum _SingleSortMode { newest, oldest, mostPlayed, alphabetical }
-enum _SingleHealthFilter { all, healthy, needsAttention }
 
 class OneTimeMessagesScreen extends StatefulWidget {
   const OneTimeMessagesScreen({super.key});
@@ -21,7 +20,6 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   _SingleSortMode _sortMode = _SingleSortMode.newest;
-  _SingleHealthFilter _healthFilter = _SingleHealthFilter.all;
 
   @override
   void dispose() {
@@ -33,44 +31,41 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
-      body: Column(
-        children: [
-          _buildHeader(context),
-          Expanded(
-            child: Consumer<SermonProvider>(
-              builder: (context, provider, child) {
-                if (provider.isLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildHeader(context),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Consumer<SermonProvider>(
+                builder: (context, provider, child) {
+                  if (provider.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                final filtered = _filteredMessages(provider.oneTimeMessages);
-                final int attentionCount = provider.oneTimeMessages
-                    .where((sermon) => _needsAttention(sermon))
-                    .length;
+                  final filtered = _filteredMessages(provider.oneTimeMessages);
 
-                return Column(
-                  children: [
-                    _buildTools(provider.oneTimeMessages.length, attentionCount),
-                    Expanded(
-                      child: filtered.isEmpty
-                          ? const Center(child: Text('No matching sermons found.'))
-                          : ListView.builder(
-                              padding:
-                                  const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                              itemCount: filtered.length,
-                              itemBuilder: (context, index) {
-                                final sermon = filtered[index];
-                                return _buildMessageCard(
-                                    context, sermon, filtered);
-                              },
-                            ),
-                    ),
-                  ],
-                );
-              },
+                  return Column(
+                    children: [
+                      _buildTools(provider.oneTimeMessages.length),
+                      if (filtered.isNotEmpty)
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final sermon = filtered[index];
+                            return _buildMessageCard(context, sermon, filtered);
+                          },
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -82,12 +77,7 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
           sermon.speaker.toLowerCase().contains(_query) ||
           sermon.description.toLowerCase().contains(_query);
 
-      final needsAttention = _needsAttention(sermon);
-      final matchesHealth = _healthFilter == _SingleHealthFilter.all ||
-          (_healthFilter == _SingleHealthFilter.healthy && !needsAttention) ||
-          (_healthFilter == _SingleHealthFilter.needsAttention && needsAttention);
-
-      return matchesQuery && matchesHealth;
+      return matchesQuery;
     }).toList();
 
     switch (_sortMode) {
@@ -101,45 +91,15 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
         filtered.sort((a, b) => b.playCount.compareTo(a.playCount));
         break;
       case _SingleSortMode.alphabetical:
-        filtered.sort((a, b) =>
-            a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        filtered.sort(
+            (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
         break;
     }
 
     return filtered;
   }
 
-  bool _needsAttention(Sermon sermon) {
-    return sermon.audioUrl.isEmpty ||
-        (sermon.imageUrl == null || sermon.imageUrl!.isEmpty) ||
-        sermon.description.trim().isEmpty;
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text('Sermon Library',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          ElevatedButton.icon(
-            onPressed: () => _showAddModal(context),
-            icon: const Icon(Icons.add),
-            label: const Text('New Upload'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A458C),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTools(int totalCount, int attentionCount) {
+  Widget _buildTools(int totalCount) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Column(
@@ -151,14 +111,6 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
                   label: 'Singles',
                   value: totalCount.toString(),
                   color: const Color(0xFF4A458C),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _summaryCard(
-                  label: 'Need Attention',
-                  value: attentionCount.toString(),
-                  color: Colors.orange,
                 ),
               ),
             ],
@@ -203,26 +155,6 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<_SingleHealthFilter>(
-                  value: _healthFilter,
-                  decoration: _dropdownDecoration('Health'),
-                  items: const [
-                    DropdownMenuItem(
-                        value: _SingleHealthFilter.all, child: Text('All')),
-                    DropdownMenuItem(
-                        value: _SingleHealthFilter.healthy,
-                        child: Text('Healthy')),
-                    DropdownMenuItem(
-                        value: _SingleHealthFilter.needsAttention,
-                        child: Text('Needs Attention')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) setState(() => _healthFilter = value);
-                  },
-                ),
-              ),
             ],
           ),
         ],
@@ -230,49 +162,8 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
     );
   }
 
-  InputDecoration _dropdownDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
-      ),
-    );
-  }
-
-  Widget _summaryCard(
-      {required String label, required String value, required Color color}) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 6),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: color)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildMessageCard(
       BuildContext context, Sermon sermon, List<Sermon> allSermons) {
-    final needsAttention = _needsAttention(sermon);
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -281,9 +172,6 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
         ],
-        border: needsAttention
-            ? Border.all(color: Colors.orange.withOpacity(0.35))
-            : null,
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
@@ -310,8 +198,7 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
                 ),
               ),
             ),
-            const Icon(Icons.play_circle_fill,
-                color: Colors.white70, size: 26),
+            const Icon(Icons.play_circle_fill, color: Colors.white70, size: 26),
           ],
         ),
         title: Text(sermon.title,
@@ -325,16 +212,8 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
               spacing: 6,
               runSpacing: 6,
               children: [
-                _infoChip(Icons.bar_chart_rounded,
-                    '${sermon.playCount} plays', Colors.blueGrey),
-                if (needsAttention)
-                  _infoChip(Icons.warning_amber_rounded, 'Needs attention',
-                      Colors.orange),
-                if (sermon.audioUrl.isEmpty)
-                  _infoChip(Icons.audiotrack, 'Missing audio', Colors.redAccent),
-                if (sermon.imageUrl == null || sermon.imageUrl!.isEmpty)
-                  _infoChip(Icons.image_not_supported_outlined, 'No cover',
-                      Colors.deepOrange),
+                _infoChip(Icons.bar_chart_rounded, '${sermon.playCount} plays',
+                    Colors.blueGrey),
               ],
             ),
           ],
@@ -385,6 +264,66 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
     );
   }
 
+  Widget _summaryCard(
+      {required String label, required String value, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 6),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _dropdownDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Sermon Library',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          ElevatedButton.icon(
+            onPressed: () => _showAddModal(context),
+            icon: const Icon(Icons.add),
+            label: const Text('New Upload'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4A458C),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openEditSheet(BuildContext context, Sermon sermon) {
     showModalBottomSheet(
       context: context,
@@ -425,6 +364,3 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
     );
   }
 }
-
-
-

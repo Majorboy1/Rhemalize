@@ -220,6 +220,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
                   const SizedBox(height: 15),
                   _buildTextField(_titleController, 'Title', Icons.title,
                       fieldColor, isDark),
+                  const SizedBox(height: 20),
                   _buildSpeakerDropdown(fieldColor, isDark),
                   _buildTextField(_descriptionController, 'Description',
                       Icons.description_outlined, fieldColor, isDark,
@@ -234,7 +235,6 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
                         label: const Text('Add Episode',
                             style: TextStyle(color: AppColors.primaryPurple)),
                       );
-
                       if (_selectedMessageType != MessageType.series) {
                         return Align(
                           alignment: Alignment.centerLeft,
@@ -415,14 +415,13 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
       value: _selectedCategory,
       dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
       style: TextStyle(color: isDark ? Colors.white : Colors.black),
-      decoration:
-          _inputDecoration('Select Service Type', Icons.calendar_today, bgColor),
+      decoration: _inputDecoration(
+          'Select Service Type', Icons.calendar_today, bgColor),
       items: const [
         DropdownMenuItem(
             value: SermonCategory.sunday, child: Text('Sunday Service')),
         DropdownMenuItem(
-            value: SermonCategory.wednesday,
-            child: Text('Wednesday Service')),
+            value: SermonCategory.wednesday, child: Text('Wednesday Service')),
       ],
       onChanged: (val) => setState(() => _selectedCategory = val!),
     );
@@ -512,7 +511,8 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
                   children: [
                     Icon(
                       Icons.audio_file_outlined,
-                      color: draft.fileName != null ? Colors.green : Colors.grey,
+                      color:
+                          draft.fileName != null ? Colors.green : Colors.grey,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -585,5 +585,3 @@ class EpisodeDraft {
     titleController.dispose();
   }
 }
-
-

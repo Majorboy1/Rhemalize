@@ -9,7 +9,6 @@ import 'series_detail_screen.dart';
 import '../../utils/app_colors.dart';
 
 enum _SeriesSortMode { newest, oldest, mostEpisodes, alphabetical }
-enum _SeriesHealthFilter { all, healthy, needsAttention }
 
 class SeriesScreen extends StatefulWidget {
   const SeriesScreen({super.key});
@@ -22,7 +21,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   _SeriesSortMode _sortMode = _SeriesSortMode.newest;
-  _SeriesHealthFilter _healthFilter = _SeriesHealthFilter.all;
 
   @override
   void dispose() {
@@ -108,9 +106,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
             child: Consumer<SermonProvider>(
               builder: (context, provider, child) {
                 final docs = _filteredSeries(provider.seriesMessages);
-                final attentionCount = provider.seriesMessages
-                    .where((sermon) => _needsAttention(sermon))
-                    .length;
 
                 if (provider.isLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -118,8 +113,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
 
                 return Column(
                   children: [
-                    _buildTools(provider.seriesMessages.length, attentionCount,
-                        isDarkMode),
+                    _buildTools(provider.seriesMessages.length, isDarkMode),
                     Expanded(
                       child: docs.isEmpty
                           ? Center(
@@ -165,11 +159,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
       final matchesQuery = _query.isEmpty ||
           sermon.title.toLowerCase().contains(_query) ||
           sermon.speaker.toLowerCase().contains(_query);
-      final needsAttention = _needsAttention(sermon);
-      final matchesHealth = _healthFilter == _SeriesHealthFilter.all ||
-          (_healthFilter == _SeriesHealthFilter.healthy && !needsAttention) ||
-          (_healthFilter == _SeriesHealthFilter.needsAttention && needsAttention);
-      return matchesQuery && matchesHealth;
+      return matchesQuery;
     }).toList();
 
     switch (_sortMode) {
@@ -183,22 +173,15 @@ class _SeriesScreenState extends State<SeriesScreen> {
         filtered.sort((a, b) => b.episodes.length.compareTo(a.episodes.length));
         break;
       case _SeriesSortMode.alphabetical:
-        filtered.sort((a, b) =>
-            a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+        filtered.sort(
+            (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
         break;
     }
 
     return filtered;
   }
 
-  bool _needsAttention(Sermon sermon) {
-    final bool missingCover = sermon.imageUrl == null || sermon.imageUrl!.isEmpty;
-    final bool noEpisodes = sermon.episodes.isEmpty;
-    final bool missingEpisodeAudio = sermon.episodes.any((e) => e.audioUrl.isEmpty);
-    return missingCover || noEpisodes || missingEpisodeAudio;
-  }
-
-  Widget _buildTools(int totalCount, int attentionCount, bool isDarkMode) {
+  Widget _buildTools(int totalCount, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
       child: Column(
@@ -208,11 +191,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
               Expanded(
                 child: _summaryCard('Series', totalCount.toString(),
                     AppColors.primaryPurple, isDarkMode),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _summaryCard('Need Attention', attentionCount.toString(),
-                    Colors.orange, isDarkMode),
               ),
             ],
           ),
@@ -258,28 +236,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<_SeriesHealthFilter>(
-                  value: _healthFilter,
-                  decoration: _dropdownDecoration(isDarkMode, 'Health'),
-                  dropdownColor:
-                      isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-                  items: const [
-                    DropdownMenuItem(
-                        value: _SeriesHealthFilter.all, child: Text('All')),
-                    DropdownMenuItem(
-                        value: _SeriesHealthFilter.healthy,
-                        child: Text('Healthy')),
-                    DropdownMenuItem(
-                        value: _SeriesHealthFilter.needsAttention,
-                        child: Text('Needs Attention')),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) setState(() => _healthFilter = value);
-                  },
-                ),
-              ),
             ],
           ),
         ],
@@ -287,63 +243,14 @@ class _SeriesScreenState extends State<SeriesScreen> {
     );
   }
 
-  InputDecoration _dropdownDecoration(bool isDarkMode, String label) {
-    return InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide.none,
-      ),
-    );
-  }
-
-  Widget _summaryCard(String label, String value, Color color, bool isDarkMode) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
-              blurRadius: 10)
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: TextStyle(
-                  fontSize: 12,
-                  color: isDarkMode ? Colors.white60 : Colors.grey)),
-          const SizedBox(height: 6),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: color)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSeriesCard(
       BuildContext context, Sermon sermon, bool isDarkMode) {
-    final needsAttention = _needsAttention(sermon);
-    final int missingEpisodeAudio =
-        sermon.episodes.where((e) => e.audioUrl.isEmpty).length;
-
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: needsAttention
-            ? Border.all(color: Colors.orange.withOpacity(0.35))
-            : null,
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.04),
@@ -389,12 +296,6 @@ class _SeriesScreenState extends State<SeriesScreen> {
                   children: [
                     _chip(Icons.bar_chart_rounded, '${sermon.playCount} plays',
                         Colors.blueGrey),
-                    if (needsAttention)
-                      _chip(Icons.warning_amber_rounded, 'Needs attention',
-                          Colors.orange),
-                    if (missingEpisodeAudio > 0)
-                      _chip(Icons.audiotrack,
-                          '$missingEpisodeAudio missing audio', Colors.redAccent),
                   ],
                 ),
               ],
@@ -449,6 +350,47 @@ class _SeriesScreenState extends State<SeriesScreen> {
               style: TextStyle(
                   color: color, fontSize: 11, fontWeight: FontWeight.w600)),
         ],
+      ),
+    );
+  }
+
+  Widget _summaryCard(
+      String label, String value, Color color, bool isDarkMode) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+              blurRadius: 10)
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 12,
+                  color: isDarkMode ? Colors.white60 : Colors.grey)),
+          const SizedBox(height: 6),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 20, fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _dropdownDecoration(bool isDarkMode, String label) {
+    return InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide.none,
       ),
     );
   }

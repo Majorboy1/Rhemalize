@@ -90,6 +90,7 @@ class _AddSeriesModalState extends State<AddSeriesModal> {
             _buildLabel("SERIES NAME"),
             _buildTextField(_titleController, "e.g. The Power of Faith",
                 Icons.folder_outlined, isDark),
+            const SizedBox(height: 20),
             _buildLabel("ASSIGNMENT"),
             Row(
               children: [
@@ -119,7 +120,6 @@ class _AddSeriesModalState extends State<AddSeriesModal> {
               fontWeight: FontWeight.bold,
               color: AppColors.primaryPurple,
               letterSpacing: 1.1)));
-
   Widget _buildTextField(TextEditingController controller, String hint,
       IconData icon, bool isDark) {
     return Padding(
