@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' show User, UserInfo;
 import 'package:provider/provider.dart';
 import '../models/sermon.dart';
 import '../providers/audio_provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/favorites_provider.dart';
 import '../utils/app_colors.dart';
 import '../services/storage_service.dart';
 import 'about_us_screen.dart';
@@ -14,8 +14,6 @@ class ProfileScreen extends StatefulWidget {
   final int? currentStreak;
   final DateTime? lastListenDate;
   final int? totalSermons;
-  final Set<String>?
-      favorites; // Kept for constructor compatibility, but ignored in logic
   final List<Sermon> sermons;
   final VoidCallback onLogout;
   final bool isAdminProfile;
@@ -27,7 +25,6 @@ class ProfileScreen extends StatefulWidget {
     this.currentStreak,
     this.lastListenDate,
     this.totalSermons,
-    this.favorites,
     required this.sermons,
     required this.onLogout,
     this.isAdminProfile = false,
@@ -54,8 +51,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final audio = context.watch<AudioProvider>();
     final authProvider = context.watch<AuthProvider>();
-    // LIVE SOURCE OF TRUTH
-    final favoritesProvider = context.watch<FavoritesProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final recentHistory =
@@ -70,12 +65,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           children: [
             _buildModernHeader(authProvider.user),
-            _buildGlassStats(isDark, favoritesProvider),
+            _buildGlassStats(isDark),
             if (showGrowth) _buildSectionHeader('Spiritual Growth'),
             if (showGrowth) _buildStreakTile(),
             _buildSectionHeader('Account & App'),
-            _buildEngagementCard(
-                audio, favoritesProvider, recentHistory, isDark),
+            _buildEngagementCard(audio, recentHistory, isDark),
             _buildSectionHeader('Engagement'),
             _buildActionCard([
               _menuItem(
@@ -83,21 +77,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 title: 'Listening History',
                 color: Colors.blueAccent,
                 onTap: () => _showListeningHistorySheet(audio, recentHistory),
-              ),
-              _menuItem(
-                icon: Icons.favorite_rounded,
-                title: 'Saved Messages',
-                color: Colors.pinkAccent,
-                onTap: () => _showListeningHistorySheet(
-                  audio,
-                  _resolveRecentHistory(
-                    widget.sermons,
-                    // FIX: Use live list from Provider here
-                    favoritesProvider.favoriteSermonIds.toList(),
-                  ),
-                  title: 'Saved Messages',
-                  emptyText: 'Save sermons to see them here.',
-                ),
               ),
               _menuItem(
                 icon: Icons.church_rounded,
@@ -124,7 +103,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildModernHeader(dynamic user) {
+  Widget _buildModernHeader(User? user) {
+    final photoUrl = _resolveUserPhotoUrl(user);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(24, 70, 24, 50),
@@ -148,10 +129,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 radius: 45,
                 backgroundColor: Colors.white10,
                 child: ClipOval(
-                  child: user?.photoURL != null
-                      ? Image.network(user!.photoURL!,
-                          fit: BoxFit.cover, width: 90, height: 90)
-                      : const Icon(Icons.person, size: 45, color: Colors.white),
+                  child: SizedBox(
+                    width: 90,
+                    height: 90,
+                    child: photoUrl == null
+                        ? _buildAvatarFallback()
+                        : Image.network(
+                            photoUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                _buildAvatarFallback(),
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -171,7 +160,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildGlassStats(bool isDark, FavoritesProvider favoritesProvider) {
+  String? _resolveUserPhotoUrl(User? user) {
+    final directPhoto = user?.photoURL?.trim();
+    if (directPhoto != null && directPhoto.isNotEmpty) {
+      return directPhoto;
+    }
+
+    for (final info in user?.providerData ?? const <UserInfo>[]) {
+      final providerPhoto = info.photoURL?.trim();
+      if (providerPhoto != null && providerPhoto.isNotEmpty) {
+        return providerPhoto;
+      }
+    }
+
+    return null;
+  }
+
+  Widget _buildAvatarFallback() {
+    return const Icon(Icons.person, size: 45, color: Colors.white);
+  }
+
+  Widget _buildGlassStats(bool isDark) {
     return Transform.translate(
       offset: const Offset(0, -30),
       child: Container(
@@ -194,9 +203,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _statCol((widget.totalSermons ?? 0).toString(), 'Heard'),
-            // FIX: Force live length from provider
-            _statCol(
-                favoritesProvider.favoriteSermonIds.length.toString(), 'Saved'),
             _statCol(
                 widget.isAdminProfile ? 'Admin' : calculatedStreak.toString(),
                 widget.isAdminProfile ? 'Role' : 'Streak'),
@@ -292,10 +298,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildEngagementCard(
-      AudioProvider audio,
-      FavoritesProvider favoritesProvider,
-      List<Sermon> recentHistory,
-      bool isDark) {
+      AudioProvider audio, List<Sermon> recentHistory, bool isDark) {
     final lastListenLabel = widget.lastListenDate == null
         ? 'No listening yet'
         : _formatProfileDate(widget.lastListenDate!);
@@ -312,51 +315,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
               blurRadius: 10)
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _engagementTile(
-                  icon: Icons.schedule_rounded,
-                  label: 'Continue From',
-                  value: audio.lastResumableId == null
-                      ? 'Nothing queued'
-                      : _formatPosition(
-                          audio.getSavedPosition(audio.lastResumableId!)),
-                  color: Colors.deepPurple,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _engagementTile(
-                  icon: Icons.favorite_rounded,
-                  label: 'Favorites Sync',
-                  // FIX: Use live length from provider
-                  value: '${favoritesProvider.favoriteSermonIds.length} saved',
-                  color: Colors.pinkAccent,
-                ),
-              ),
-            ],
+          Expanded(
+            child: _engagementTile(
+              icon: Icons.schedule_rounded,
+              label: 'Continue From',
+              value: audio.lastResumableId == null
+                  ? 'Nothing queued'
+                  : _formatPosition(
+                      audio.getSavedPosition(audio.lastResumableId!)),
+              color: Colors.deepPurple,
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                  child: _engagementTile(
-                      icon: Icons.history_rounded,
-                      label: 'Recent Plays',
-                      value: '${recentHistory.length}',
-                      color: Colors.blueAccent)),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _engagementTile(
-                      icon: Icons.calendar_today_rounded,
-                      label: 'Last Listen',
-                      value: lastListenLabel,
-                      color: Colors.orange)),
-            ],
-          ),
+          const SizedBox(width: 12),
+          Expanded(
+              child: _engagementTile(
+                  icon: Icons.history_rounded,
+                  label: 'Recent Plays',
+                  value: '${recentHistory.length}',
+                  color: Colors.blueAccent)),
+          const SizedBox(width: 12),
+          Expanded(
+              child: _engagementTile(
+                  icon: Icons.calendar_today_rounded,
+                  label: 'Last Listen',
+                  value: lastListenLabel,
+                  color: Colors.orange)),
         ],
       ),
     );
@@ -487,9 +472,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               title: const Text('Clear Audio Cache'),
               onTap: () async {
                 await StorageService().remove('cached_audio_list');
-                if (!mounted) return;
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                if (!context.mounted || !mounted) return;
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(this.context).showSnackBar(
                     const SnackBar(content: Text('Cache cleared!')));
               },
             ),
@@ -621,3 +606,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
+
+
+
+
+

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/audio_provider.dart';
 import '../../providers/sermon_provider.dart';
-import '../../providers/favorites_provider.dart';
 import '../../providers/auth_provider.dart';
 
 // Screens
@@ -251,7 +250,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
           userEmail: auth.user?.email ?? '',
           currentStreak: null,
           totalSermons: sermon.sermons.length,
-          favorites: context.watch<FavoritesProvider>().favoriteSermonIds,
           sermons: sermon.sermons,
           onLogout: _handleLogout,
           isAdminProfile: true,
@@ -368,6 +366,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     );
   }
 }
+
 
 
 

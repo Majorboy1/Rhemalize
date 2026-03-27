@@ -216,11 +216,27 @@ class AudioProvider with ChangeNotifier {
       {bool isEpisode = false, String? parentSermonId}) {
     if (_lastTrackId == id) return;
 
+    final sermonId = isEpisode ? parentSermonId : id;
+    if (sermonId != null) {
+      _rememberPlaybackLocally(trackId: id, sermonId: sermonId);
+    }
+
     _lastTrackId = id;
     _pendingHistoryTrackId = id;
-    _pendingHistorySermonId = isEpisode ? parentSermonId : id;
+    _pendingHistorySermonId = sermonId;
     _pendingHistoryIsEpisode = isEpisode;
     _pendingHistoryCommitted = false;
+  }
+
+  void _rememberPlaybackLocally({
+    required String trackId,
+    required String sermonId,
+  }) {
+    _playedIds.add(sermonId);
+    _playedOrder.remove(trackId);
+    _playedOrder.insert(0, trackId);
+    unawaited(_savePlayedHistory());
+    notifyListeners();
   }
 
   void _commitPendingHistoryIfNeeded() {
@@ -234,9 +250,9 @@ class AudioProvider with ChangeNotifier {
     _pendingHistoryCommitted = true;
 
     // Update local state
-    _playedOrder.remove(sermonId);
-    _playedOrder.insert(0, sermonId);
     _playedIds.add(sermonId);
+    _playedOrder.remove(trackId);
+    _playedOrder.insert(0, trackId);
     _resumePositions[trackId] = _position.inMilliseconds;
     _lastResumableId = trackId;
 
@@ -650,6 +666,11 @@ class AudioProvider with ChangeNotifier {
   }
 
   Future<void> clearPlayedHistory() async {
+    final idsToClear = <String>{
+      ..._playedOrder,
+      ..._resumePositions.keys,
+      if (_lastResumableId != null) _lastResumableId!,
+    };
     _playedIds.clear();
     _playedOrder.clear();
     _resumePositions.clear();
@@ -658,6 +679,9 @@ class AudioProvider with ChangeNotifier {
     await prefs.remove(_playedKey);
     await prefs.remove(_playedOrderKey);
     await prefs.remove(_lastResumeKey);
+    for (final id in idsToClear) {
+      await prefs.remove('$_positionPrefix$id');
+    }
     notifyListeners();
   }
 
@@ -689,3 +713,6 @@ class AudioProvider with ChangeNotifier {
     }
   }
 }
+
+
+

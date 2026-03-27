@@ -62,19 +62,26 @@ class AuthProvider with ChangeNotifier {
     try {
       final userDoc = _firestore.collection('users').doc(user.uid);
       final docSnapshot = await userDoc.get();
+      final photoUrl = user.photoURL;
 
       if (!docSnapshot.exists) {
         _userRole = 'user';
         await userDoc.set({
           'email': user.email,
           'name': user.displayName,
+          'photoUrl': photoUrl,
           'role': 'user',
           'lastActive': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } else {
         final data = docSnapshot.data();
         _userRole = data?['role'] ?? 'user';
-        await userDoc.update({'lastActive': FieldValue.serverTimestamp()});
+        await userDoc.update({
+          'email': user.email,
+          'name': user.displayName,
+          'photoUrl': photoUrl,
+          'lastActive': FieldValue.serverTimestamp(),
+        });
       }
       notifyListeners();
     } catch (e) {
@@ -96,7 +103,33 @@ class AuthProvider with ChangeNotifier {
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      return await _auth.signInWithCredential(credential);
+      final userCredential = await _auth.signInWithCredential(credential);
+      final signedInUser = userCredential.user;
+
+      if (signedInUser != null) {
+        final googlePhotoUrl = googleUser.photoUrl;
+        final googleDisplayName = googleUser.displayName;
+
+        if (googleDisplayName != null &&
+            googleDisplayName.isNotEmpty &&
+            signedInUser.displayName != googleDisplayName) {
+          await signedInUser.updateDisplayName(googleDisplayName);
+        }
+
+        if (googlePhotoUrl != null &&
+            googlePhotoUrl.isNotEmpty &&
+            signedInUser.photoURL != googlePhotoUrl) {
+          await signedInUser.updatePhotoURL(googlePhotoUrl);
+        }
+
+        await signedInUser.reload();
+        _user = _auth.currentUser;
+        if (_user != null) {
+          await _updateUserStats(_user!);
+        }
+      }
+
+      return userCredential;
     } catch (e) {
       debugPrint("Google Sign-In Error: $e");
       rethrow;
@@ -298,4 +331,6 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
+
+
 

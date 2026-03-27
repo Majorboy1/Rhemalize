@@ -193,6 +193,7 @@ class FullScreenPlayer extends StatelessWidget {
                         onPressed: () async {
                           final wasAdded =
                               await favoritesProvider.toggleFavorite(currentId);
+                          if (!context.mounted) return;
                           _showCenterFlash(
                               context,
                               wasAdded
@@ -609,3 +610,4 @@ class _QueueSheet extends StatelessWidget {
         child: const Icon(Icons.music_note, color: Colors.grey));
   }
 }
+

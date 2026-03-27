@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/audio_provider.dart';
 import '../providers/sermon_provider.dart';
-import '../providers/favorites_provider.dart';
 import '../providers/auth_provider.dart';
 
 import 'home_screen.dart';
@@ -91,7 +90,6 @@ class _MainAppState extends State<MainApp> {
     // are handled by the sub-screens (HomeScreen, etc.), not the MainApp shell.
     final authProvider = context.read<AuthProvider>();
     final sermonProvider = context.read<SermonProvider>();
-    final favoritesProvider = context.read<FavoritesProvider>();
 
     // Determine which screen to show based on the active tab
     Widget currentScreen;
@@ -114,7 +112,6 @@ class _MainAppState extends State<MainApp> {
           userEmail: authProvider.user?.email ?? '',
           currentStreak: 0,
           totalSermons: sermonProvider.sermons.length,
-          favorites: favoritesProvider.favoriteSermonIds,
           sermons: sermonProvider.sermons,
           onLogout: () => authProvider.signOut(),
         );
@@ -245,3 +242,4 @@ class _SpinningRhemaLogoState extends State<SpinningRhemaLogo>
     );
   }
 }
+
