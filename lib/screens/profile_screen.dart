@@ -154,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 4),
           Text(widget.userEmail,
               style: TextStyle(
-                  color: Colors.white.withOpacity(0.7), fontSize: 14)),
+                  color: Colors.white.withValues(alpha: 0.7), fontSize: 14)),
         ],
       ),
     );
@@ -191,7 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
               blurRadius: 20,
               offset: const Offset(0, 10),
             )
@@ -263,7 +263,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-              color: streakColors[0].withOpacity(0.4),
+              color: streakColors[0].withValues(alpha: 0.4),
               blurRadius: 15,
               offset: const Offset(0, 5))
         ],
@@ -311,7 +311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.1 : 0.03),
+              color: Colors.black.withValues(alpha: isDark ? 0.1 : 0.03),
               blurRadius: 10)
         ],
       ),
@@ -355,7 +355,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(18)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,7 +385,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.1 : 0.02),
+              color: Colors.black.withValues(alpha: isDark ? 0.1 : 0.02),
               blurRadius: 10)
         ],
       ),
@@ -404,7 +404,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12)),
         child: Icon(icon, color: color, size: 22),
       ),
@@ -424,7 +424,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         icon: const Icon(Icons.logout_rounded, size: 18),
         label: const Text('Log Out Account'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.redAccent.withOpacity(0.1),
+          backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
           foregroundColor: Colors.redAccent,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -561,7 +561,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       itemBuilder: (_, i) => ListTile(
                         leading: CircleAvatar(
                             backgroundColor:
-                                AppColors.primaryPurple.withOpacity(0.1),
+                                AppColors.primaryPurple.withValues(alpha: 0.1),
                             child: Text('${i + 1}')),
                         title: Text(sermons[i].title,
                             maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -606,6 +606,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
 
 
 

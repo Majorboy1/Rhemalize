@@ -169,7 +169,7 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
           TextStyle(color: isDarkMode ? Colors.white60 : Colors.black54),
       prefixIcon: Icon(icon, color: AppColors.primaryPurple),
       filled: true,
-      fillColor: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+      fillColor: isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
     );
@@ -345,11 +345,11 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
             borderRadius: BorderRadius.circular(24),
             border: isPinned
                 ? Border.all(
-                    color: AppColors.primaryPurple.withOpacity(0.5), width: 1.5)
+                    color: AppColors.primaryPurple.withValues(alpha: 0.5), width: 1.5)
                 : null,
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.04),
+                  color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
                   blurRadius: 12,
                   offset: const Offset(0, 4))
             ]),
@@ -363,7 +363,7 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryPurple.withOpacity(0.1),
+                    color: AppColors.primaryPurple.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -392,7 +392,7 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
                       border: Border.all(
                           color: isPinned
                               ? AppColors.primaryPurple
-                              : AppColors.primaryPurple.withOpacity(0.1),
+                              : AppColors.primaryPurple.withValues(alpha: 0.1),
                           width: 2),
                     ),
                     child: CircleAvatar(
@@ -443,20 +443,20 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
       child: Container(
         decoration: BoxDecoration(
             border: Border.all(
-                color: AppColors.primaryPurple.withOpacity(0.3),
+                color: AppColors.primaryPurple.withValues(alpha: 0.3),
                 width: 2,
                 style: BorderStyle.solid),
             borderRadius: BorderRadius.circular(24),
-            color: AppColors.primaryPurple.withOpacity(0.02)),
+            color: AppColors.primaryPurple.withValues(alpha: 0.02)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.add_circle_outline,
-                color: AppColors.primaryPurple.withOpacity(0.5), size: 40),
+                color: AppColors.primaryPurple.withValues(alpha: 0.5), size: 40),
             const SizedBox(height: 8),
             Text('Add New',
                 style: TextStyle(
-                    color: AppColors.primaryPurple.withOpacity(0.7),
+                    color: AppColors.primaryPurple.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w600)),
           ],
         ),
@@ -464,5 +464,6 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
     );
   }
 }
+
 
 

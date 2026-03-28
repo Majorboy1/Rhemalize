@@ -87,7 +87,7 @@ class _SearchScreenState extends State<SearchScreen> {
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.06),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           )
@@ -110,7 +110,7 @@ class _SearchScreenState extends State<SearchScreen> {
             decoration: BoxDecoration(
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primaryPurple.withOpacity(0.15),
+                  color: AppColors.primaryPurple.withValues(alpha: 0.15),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 )
@@ -128,19 +128,19 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
                 filled: true,
                 fillColor:
-                    isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade50,
+                    isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade50,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(18),
                   borderSide: isDark
-                      ? BorderSide(color: Colors.white.withOpacity(0.1))
+                      ? BorderSide(color: Colors.white.withValues(alpha: 0.1))
                       : BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(18),
                   borderSide: isDark
-                      ? BorderSide(color: Colors.white.withOpacity(0.1))
+                      ? BorderSide(color: Colors.white.withValues(alpha: 0.1))
                       : BorderSide.none,
                 ),
               ),
@@ -174,11 +174,11 @@ class _SearchScreenState extends State<SearchScreen> {
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color:
-                  isDark ? Colors.white.withOpacity(0.08) : Colors.transparent,
+                  isDark ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.25 : 0.05),
+                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
                 blurRadius: 15,
                 offset: const Offset(0, 6),
               )
@@ -294,7 +294,7 @@ class _SearchScreenState extends State<SearchScreen> {
                               : Icons.favorite_border_rounded,
                           color: favs.isFavorite(sermon.id)
                               ? Colors.redAccent
-                              : Colors.grey.withOpacity(0.5),
+                              : Colors.grey.withValues(alpha: 0.5),
                         ),
                         onPressed: () => favs.toggleFavorite(sermon.id),
                       ),
@@ -385,7 +385,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.03) : Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.white,
         borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
@@ -437,3 +437,4 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 }
+

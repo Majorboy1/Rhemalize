@@ -136,7 +136,7 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<_SingleSortMode>(
-                  value: _sortMode,
+                  initialValue: _sortMode,
                   decoration: _dropdownDecoration('Sort'),
                   items: const [
                     DropdownMenuItem(
@@ -170,7 +170,7 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)
         ],
       ),
       child: ListTile(
@@ -248,7 +248,7 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -272,7 +272,7 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)
         ],
       ),
       child: Column(
@@ -364,3 +364,4 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
     );
   }
 }
+

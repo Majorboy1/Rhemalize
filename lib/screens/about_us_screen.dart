@@ -96,7 +96,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                       width: double.infinity,
                       height: double.infinity,
                       errorBuilder: (context, error, stackTrace) => Container(
-                        color: AppColors.primaryPurple.withOpacity(0.2),
+                        color: AppColors.primaryPurple.withValues(alpha: 0.2),
                         child: const Icon(Icons.church,
                             size: 80, color: Colors.white24),
                       ),
@@ -160,9 +160,9 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.primaryPurple.withOpacity(0.05),
+        color: AppColors.primaryPurple.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primaryPurple.withOpacity(0.1)),
+        border: Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.1)),
       ),
       child: const Column(
         children: [
@@ -195,7 +195,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: AppColors.primaryPurple.withOpacity(0.1),
+            color: AppColors.primaryPurple.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: AppColors.primaryPurple),
@@ -214,3 +214,4 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
     );
   }
 }
+

@@ -147,7 +147,7 @@ class _AddEpisodeModalState extends State<AddEpisodeModal> {
 
             // DROP DOWN FOR PASTOR
             DropdownButtonFormField<String>(
-              value: _selectedSpeaker,
+              initialValue: _selectedSpeaker,
               decoration: _inputDecoration("Speaker/Pastor", Icons.person),
               items: AppConstants.availablePastors.map((String pastor) {
                 return DropdownMenuItem(value: pastor, child: Text(pastor));
@@ -250,7 +250,7 @@ class _AddEpisodeModalState extends State<AddEpisodeModal> {
           color: const Color(0xFFF0EEFF),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: const Color(0xFF4A458C).withOpacity(0.3),
+            color: const Color(0xFF4A458C).withValues(alpha: 0.3),
           ),
         ),
         child: Row(
@@ -276,3 +276,4 @@ class _AddEpisodeModalState extends State<AddEpisodeModal> {
     );
   }
 }
+

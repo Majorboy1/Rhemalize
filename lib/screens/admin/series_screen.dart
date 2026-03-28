@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/sermon.dart';
 import '../../providers/sermon_provider.dart';
@@ -215,7 +215,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<_SeriesSortMode>(
-                  value: _sortMode,
+                  initialValue: _sortMode,
                   decoration: _dropdownDecoration(isDarkMode, 'Sort'),
                   dropdownColor:
                       isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
@@ -253,7 +253,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.04),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.3 : 0.04),
               blurRadius: 10)
         ],
       ),
@@ -338,7 +338,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -363,7 +363,7 @@ class _SeriesScreenState extends State<SeriesScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(isDarkMode ? 0.2 : 0.03),
+              color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.03),
               blurRadius: 10)
         ],
       ),
@@ -395,3 +395,4 @@ class _SeriesScreenState extends State<SeriesScreen> {
     );
   }
 }
+

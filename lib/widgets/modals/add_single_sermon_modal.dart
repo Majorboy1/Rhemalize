@@ -210,7 +210,7 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
           prefixIcon: Icon(icon, color: AppColors.primaryPurple, size: 20),
           filled: true,
           fillColor:
-              isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF7F8FA),
+              isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F8FA),
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
               borderSide: BorderSide.none),
@@ -223,13 +223,13 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
       Function(String?) onChanged, bool isDark, String label) {
     return DropdownButtonFormField<String>(
       isExpanded: true,
-      value: value,
+      initialValue: value,
       dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
       decoration: InputDecoration(
         labelText: label,
         filled: true,
         fillColor:
-            isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF7F8FA),
+            isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F8FA),
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
             borderSide: BorderSide.none),
@@ -261,12 +261,12 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
             color: hasFile
-                ? Colors.green.withOpacity(0.05)
-                : AppColors.primaryPurple.withOpacity(0.05),
+                ? Colors.green.withValues(alpha: 0.05)
+                : AppColors.primaryPurple.withValues(alpha: 0.05),
             border: Border.all(
                 color: hasFile
                     ? Colors.green
-                    : AppColors.primaryPurple.withOpacity(0.2),
+                    : AppColors.primaryPurple.withValues(alpha: 0.2),
                 width: 1),
             borderRadius: BorderRadius.circular(15)),
         child: Column(
@@ -296,7 +296,7 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
           LinearProgressIndicator(
               value: _uploadProgress,
               color: AppColors.primaryPurple,
-              backgroundColor: AppColors.primaryPurple.withOpacity(0.1)),
+              backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1)),
           const SizedBox(height: 5),
           Text('${(_uploadProgress * 100).toInt()}% uploaded',
               style: TextStyle(
@@ -361,5 +361,4 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
     );
   }
 }
-
 

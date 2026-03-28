@@ -66,13 +66,12 @@ class SeriesDetailPage extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                if (series.description != null &&
-                    series.description!.isNotEmpty) ...[
+                if (series.description.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
-                    series.description!,
+                    series.description,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 14,
                       height: 1.4,
                     ),
@@ -146,11 +145,11 @@ class SeriesDetailPage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isCurrentlyPlaying
-            ? AppColors.primaryPurple.withOpacity(0.1) // Highlight if playing
-            : (isDark ? Colors.white.withOpacity(0.05) : AppColors.gray50),
+            ? AppColors.primaryPurple.withValues(alpha: 0.1) // Highlight if playing
+            : (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.gray50),
         borderRadius: BorderRadius.circular(16),
         border: isCurrentlyPlaying
-            ? Border.all(color: AppColors.primaryPurple.withOpacity(0.3))
+            ? Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.3))
             : null,
       ),
       child: InkWell(
@@ -177,7 +176,7 @@ class SeriesDetailPage extends StatelessWidget {
                       ? AppColors.primaryPurple
                       : (isDark ? Colors.black26 : Colors.white),
                   border: Border.all(
-                      color: AppColors.primaryPurple.withOpacity(0.1)),
+                      color: AppColors.primaryPurple.withValues(alpha: 0.1)),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -215,7 +214,7 @@ class SeriesDetailPage extends StatelessWidget {
                           style: TextStyle(
                             color: isDark
                                 ? Colors.white60
-                                : Colors.black.withOpacity(0.5),
+                                : Colors.black.withValues(alpha: 0.5),
                             fontSize: 13,
                           ),
                         ),
@@ -299,3 +298,4 @@ class SeriesDetailPage extends StatelessWidget {
     );
   }
 }
+

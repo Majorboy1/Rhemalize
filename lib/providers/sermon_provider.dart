@@ -46,7 +46,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         .listen((snapshot) {
       _sermons = snapshot.docs.map((doc) {
         // Safe mapping using our updated fromFirestore model logic
-        return Sermon.fromFirestore(doc.data() as Map<String, dynamic>, doc.id);
+        return Sermon.fromFirestore(doc.data(), doc.id);
       }).toList();
       _isLoading = false;
 

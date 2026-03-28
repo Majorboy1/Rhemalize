@@ -144,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   Container(
                       height: MediaQuery.of(context).size.height * 0.42,
-                      color: Colors.black.withOpacity(0.3)),
+                      color: Colors.black.withValues(alpha: 0.3)),
                 ],
               ),
             ),
@@ -255,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen>
           children: [
             // Standard Multi-color Google Icon
             Image.network(
-              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_\"G\"_Logo.svg/480px-Google_\"G\"_Logo.svg.png',
+              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_"G"_Logo.svg/480px-Google_"G"_Logo.svg.png',
               height: 24,
               errorBuilder: (context, error, stackTrace) =>
                   const Icon(Icons.g_mobiledata, color: Colors.white, size: 30),

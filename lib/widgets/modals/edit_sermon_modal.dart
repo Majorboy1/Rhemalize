@@ -127,7 +127,7 @@ class _EditSermonModalState extends State<EditSermonModal> {
 
             // Category Dropdown
             DropdownButtonFormField<SermonCategory>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: InputDecoration(
                 labelText: "Category",
                 prefixIcon: const Icon(Icons.category),

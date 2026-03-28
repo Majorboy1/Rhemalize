@@ -49,7 +49,7 @@ class MiniPlayer extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -68,7 +68,7 @@ class MiniPlayer extends StatelessWidget {
                   height: 3,
                   child: LinearProgressIndicator(
                     value: progress,
-                    backgroundColor: AppColors.primaryPurple.withOpacity(0.1),
+                    backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1),
                     valueColor: const AlwaysStoppedAnimation<Color>(
                         AppColors.primaryPurple),
                   ),
@@ -88,8 +88,8 @@ class MiniPlayer extends StatelessWidget {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           color: isPlaying
-                              ? AppColors.primaryPurple.withOpacity(0.05)
-                              : Colors.grey.withOpacity(0.1),
+                              ? AppColors.primaryPurple.withValues(alpha: 0.05)
+                              : Colors.grey.withValues(alpha: 0.1),
                           image: const DecorationImage(
                             fit: BoxFit
                                 .contain, // Contain looks better for logos
@@ -150,3 +150,4 @@ class MiniPlayer extends StatelessWidget {
     );
   }
 }
+

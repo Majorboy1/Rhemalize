@@ -8,8 +8,9 @@ class SeniorPastorBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (speaker != AppConstants.seniorPastorName)
+    if (speaker != AppConstants.seniorPastorName) {
       return const SizedBox.shrink();
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

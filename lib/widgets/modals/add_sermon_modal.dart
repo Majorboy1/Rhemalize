@@ -90,7 +90,7 @@ class AddSermonModal extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.03) : Colors.grey[50],
+          color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey[50],
           border: Border.all(
             color: isDark ? Colors.white10 : Colors.grey.shade200,
           ),
@@ -99,7 +99,7 @@ class AddSermonModal extends StatelessWidget {
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: AppColors.primaryPurple.withOpacity(0.1),
+              backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1),
               child: Icon(icon, color: AppColors.primaryPurple),
             ),
             const SizedBox(width: 16),
@@ -140,3 +140,4 @@ class AddSermonModal extends StatelessWidget {
     );
   }
 }
+

@@ -184,7 +184,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color fieldColor =
-        isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50]!;
+        isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50]!;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
@@ -332,7 +332,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
                   value: _uploadProgress,
                   strokeWidth: 8,
                   color: AppColors.primaryPurple,
-                  backgroundColor: AppColors.primaryPurple.withOpacity(0.2),
+                  backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.2),
                 ),
               ),
               Text(
@@ -353,7 +353,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
   Widget _buildTypeSelector(bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
         borderRadius: BorderRadius.circular(12),
       ),
       padding: const EdgeInsets.all(4),
@@ -412,7 +412,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
   Widget _buildCategoryDropdown(Color bgColor, bool isDark) {
     return DropdownButtonFormField<SermonCategory>(
       isExpanded: true,
-      value: _selectedCategory,
+      initialValue: _selectedCategory,
       dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
       style: TextStyle(color: isDark ? Colors.white : Colors.black),
       decoration: _inputDecoration(
@@ -432,7 +432,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
       padding: const EdgeInsets.only(bottom: 16),
       child: DropdownButtonFormField<String>(
         isExpanded: true,
-        value: _selectedSpeaker,
+        initialValue: _selectedSpeaker,
         dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
         style: TextStyle(color: isDark ? Colors.white : Colors.black),
         decoration:
@@ -456,7 +456,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
     return Card(
       key: ValueKey(draft.id),
       margin: const EdgeInsets.only(bottom: 20),
-      color: isDark ? Colors.white.withOpacity(0.02) : Colors.white,
+      color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.white,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
@@ -471,7 +471,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: AppColors.primaryPurple.withOpacity(0.1),
+                  backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1),
                   child: Text(
                     '${index + 1}',
                     style: const TextStyle(
@@ -499,12 +499,12 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   color: draft.fileName != null
-                      ? Colors.green.withOpacity(0.05)
+                      ? Colors.green.withValues(alpha: 0.05)
                       : bgColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                       color: draft.fileName != null
-                          ? Colors.green.withOpacity(0.5)
+                          ? Colors.green.withValues(alpha: 0.5)
                           : Colors.transparent),
                 ),
                 child: Row(
@@ -585,3 +585,4 @@ class EpisodeDraft {
     titleController.dispose();
   }
 }
+

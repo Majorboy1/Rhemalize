@@ -42,7 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: const Text("Push notifications for new sermons",
                       style: TextStyle(fontSize: 12)),
                   value: _notificationsEnabled,
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                   onChanged: (val) =>
                       setState(() => _notificationsEnabled = val),
                 ),
@@ -115,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)
+          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10)
         ],
       );
 
@@ -146,5 +146,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-
 

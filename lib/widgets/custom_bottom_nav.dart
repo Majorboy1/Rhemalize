@@ -24,7 +24,7 @@ class BottomNav extends StatelessWidget {
         border: Border(
           top: BorderSide(
               color: isDarkMode
-                  ? Colors.white.withOpacity(0.1)
+                  ? Colors.white.withValues(alpha: 0.1)
                   : const Color(0xFFE5E7EB)),
         ),
       ),
@@ -91,3 +91,4 @@ class BottomNav extends StatelessWidget {
     );
   }
 }
+

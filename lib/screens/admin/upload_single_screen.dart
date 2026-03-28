@@ -19,8 +19,8 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
   final _descController = TextEditingController();
   final _imageController = TextEditingController();
 
-  String _selectedSpeaker = "Pastor Bright Elliot";
-  String _selectedCategory = "sunday";
+  final String _selectedSpeaker = "Pastor Bright Elliot";
+  final String _selectedCategory = "sunday";
 
   File? _audioFile;
   Uint8List? _webAudioBytes;
@@ -70,9 +70,8 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
             description: _descController.text.trim(),
             audioFile: _audioFile,
             audioBytes: _webAudioBytes,
-            imageUrl: _imageController.text.isEmpty
-                ? ""
-                : _imageController.text,
+            imageUrl:
+                _imageController.text.isEmpty ? "" : _imageController.text,
             category: _selectedCategory,
             onProgress: (progress) {
               setState(() => _uploadProgress = progress);
@@ -99,7 +98,7 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final Color fieldBg =
-        isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100]!;
+        isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100]!;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
@@ -157,7 +156,7 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
                   child: CircularProgressIndicator(
                     value: _uploadProgress,
                     strokeWidth: 8,
-                    backgroundColor: AppColors.primaryPurple.withOpacity(0.1),
+                    backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1),
                     color: AppColors.primaryPurple,
                   ),
                 ),
@@ -226,11 +225,11 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
             color:
-                hasFile ? Colors.green.withOpacity(0.05) : Colors.transparent,
+                hasFile ? Colors.green.withValues(alpha: 0.05) : Colors.transparent,
             border: Border.all(
               color: hasFile
                   ? Colors.green
-                  : AppColors.primaryPurple.withOpacity(0.3),
+                  : AppColors.primaryPurple.withValues(alpha: 0.3),
               style: hasFile ? BorderStyle.solid : BorderStyle.solid,
             ),
             borderRadius: BorderRadius.circular(15)),
@@ -274,5 +273,4 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
     );
   }
 }
-
 

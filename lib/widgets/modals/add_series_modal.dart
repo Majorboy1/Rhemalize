@@ -95,17 +95,27 @@ class _AddSeriesModalState extends State<AddSeriesModal> {
             Row(
               children: [
                 Expanded(
-                    child: _buildDropdown(_speakers, _selectedSpeaker!,
-                        (v) => setState(() => _selectedSpeaker = v), isDark)),
+                  child: _buildDropdown(
+                    _speakers,
+                    _selectedSpeaker!,
+                    (v) => setState(() => _selectedSpeaker = v),
+                    isDark,
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
-                    child: _buildDropdown(
-                        ['sunday', 'wednesday'],
-                        _selectedCategory,
-                        (v) => setState(() => _selectedCategory = v!),
-                        isDark)),
+                  child: _buildDropdown(
+                    ['sunday', 'wednesday'],
+                    _selectedCategory,
+                    (v) => setState(() => _selectedCategory = v!),
+                    isDark,
+                  ),
+                ),
               ],
             ),
+            const SizedBox(height: 8),
+            // Keep creation state visible so admins don't double-submit.
+            _buildActionButton(),
           ],
         ),
       ),
@@ -131,8 +141,9 @@ class _AddSeriesModalState extends State<AddSeriesModal> {
           hintText: hint,
           prefixIcon: Icon(icon, size: 20, color: AppColors.primaryPurple),
           filled: true,
-          fillColor:
-              isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF7F8FA),
+          fillColor: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : const Color(0xFFF7F8FA),
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
               borderSide: BorderSide.none),
@@ -144,12 +155,13 @@ class _AddSeriesModalState extends State<AddSeriesModal> {
   Widget _buildDropdown(List<String> items, String value,
       Function(String?) onChanged, bool isDark) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       dropdownColor: isDark ? const Color(0xFF2C2C2C) : Colors.white,
       decoration: InputDecoration(
           filled: true,
-          fillColor:
-              isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF7F8FA),
+          fillColor: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : const Color(0xFFF7F8FA),
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
               borderSide: BorderSide.none)),

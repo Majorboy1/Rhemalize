@@ -100,7 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     boxShadow: scrolled
                         ? [
                             BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 10,
                                 offset: const Offset(0, -5))
                           ]
@@ -287,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
+                color: Colors.white.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
                 // CHANGED: Fixed to use Rhema logo directly as per your request
                 image: const DecorationImage(
@@ -377,7 +377,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.12),
+          color: Colors.white.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -459,7 +459,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? AppColors.primaryPurple
                 : (isDark
                     ? Colors.white10
-                    : AppColors.primaryPurple.withOpacity(0.05)),
+                    : AppColors.primaryPurple.withValues(alpha: 0.05)),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Center(
@@ -522,7 +522,7 @@ class _StaticRhemaLogo extends StatelessWidget {
       width: size,
       padding: EdgeInsets.all(innerPadding),
       decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1), shape: BoxShape.circle),
+          color: Colors.white.withValues(alpha: 0.1), shape: BoxShape.circle),
       child: Image.asset('assets/images/rhema-logo.png',
           fit: BoxFit.contain,
           errorBuilder: (c, e, s) =>
@@ -545,3 +545,4 @@ class _ResumeTarget {
   final String title;
   final String subtitle;
 }
+

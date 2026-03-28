@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -91,7 +91,7 @@ class DashboardScreen extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)
           ]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,3 +129,4 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 }
+

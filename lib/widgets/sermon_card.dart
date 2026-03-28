@@ -36,7 +36,8 @@ class SermonCard extends StatelessWidget {
 
 Check out this powerful word here: $shareLink
 ''';
-    Share.share(shareText, subject: 'Rhemalize - Share the Word');
+    SharePlus.instance.share(
+        ShareParams(text: shareText, subject: 'Rhemalize - Share the Word'));
   }
 
   @override
@@ -51,7 +52,7 @@ Check out this powerful word here: $shareLink
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -148,7 +149,7 @@ Check out this powerful word here: $shareLink
                       style: TextStyle(
                         fontSize: 12,
                         height: 1.4,
-                        color: Colors.black.withOpacity(0.55),
+                        color: Colors.black.withValues(alpha: 0.55),
                       ),
                     ),
                   ],
@@ -261,7 +262,7 @@ Check out this powerful word here: $shareLink
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primaryPurple.withOpacity(0.2),
+            color: AppColors.primaryPurple.withValues(alpha: 0.2),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
@@ -308,3 +309,4 @@ Check out this powerful word here: $shareLink
     );
   }
 }
+

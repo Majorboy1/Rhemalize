@@ -12,7 +12,6 @@ class FavoritesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final favoritesProvider = context.watch<FavoritesProvider>();
     final audioProvider = context.watch<AudioProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final favoriteItems = favoritesProvider.favoriteSermons;
 
     return Scaffold(

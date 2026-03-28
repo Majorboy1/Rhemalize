@@ -162,7 +162,7 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
             _buildField(
                 _titleController, "Episode Title", Icons.title, isDarkMode),
             DropdownButtonFormField<String>(
-              value: _selectedSpeaker,
+              initialValue: _selectedSpeaker,
               dropdownColor:
                   isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
               style: TextStyle(color: textColor),
@@ -244,7 +244,7 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
         prefixIcon: Icon(icon, color: AppColors.primaryPurple),
         filled: true,
         fillColor:
-            isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+            isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
@@ -274,11 +274,11 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         decoration: BoxDecoration(
             color: isDarkMode
-                ? AppColors.primaryPurple.withOpacity(0.1)
+                ? AppColors.primaryPurple.withValues(alpha: 0.1)
                 : const Color(0xFFF0EEFF),
             borderRadius: BorderRadius.circular(15),
             border:
-                Border.all(color: AppColors.primaryPurple.withOpacity(0.5))),
+                Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.5))),
         child: Row(
           children: [
             _isPicking
@@ -323,3 +323,4 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
     );
   }
 }
+

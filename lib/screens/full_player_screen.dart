@@ -35,7 +35,8 @@ class FullScreenPlayer extends StatelessWidget {
   void _shareSermon(String title, String speaker) {
     final String shareText =
         '🎧 Listening to "$title" by $speaker on Rhemalize!\nThis message is transforming my life. Check it out!';
-    Share.share(shareText, subject: 'Check out this sermon!');
+    SharePlus.instance
+        .share(ShareParams(text: shareText, subject: 'Check out this sermon!'));
   }
 
   @override
@@ -216,7 +217,7 @@ class FullScreenPlayer extends StatelessWidget {
                       activeTrackColor: AppColors.primaryPurple,
                       inactiveTrackColor: isDarkMode
                           ? Colors.white10
-                          : AppColors.primaryPurple.withOpacity(0.1),
+                          : AppColors.primaryPurple.withValues(alpha: 0.1),
                       thumbColor:
                           isDarkMode ? Colors.white : AppColors.primaryPurple,
                     ),
@@ -263,7 +264,7 @@ class FullScreenPlayer extends StatelessWidget {
                             size: 26,
                             color: audioProvider.isShuffleOn
                                 ? AppColors.primaryPurple
-                                : Colors.grey.withOpacity(0.6)),
+                                : Colors.grey.withValues(alpha: 0.6)),
                         onPressed: () => audioProvider.toggleShuffle(),
                       ),
                       IconButton(
@@ -287,7 +288,7 @@ class FullScreenPlayer extends StatelessWidget {
                               boxShadow: [
                                 BoxShadow(
                                     color: AppColors.primaryPurple
-                                        .withOpacity(0.4),
+                                        .withValues(alpha: 0.4),
                                     blurRadius: 20,
                                     offset: const Offset(0, 10))
                               ]),
@@ -322,7 +323,7 @@ class FullScreenPlayer extends StatelessWidget {
                             size: 26,
                             color: audioProvider.loopMode != LoopMode.off
                                 ? AppColors.primaryPurple
-                                : Colors.grey.withOpacity(0.6)),
+                                : Colors.grey.withValues(alpha: 0.6)),
                         onPressed: () => audioProvider.toggleLoopMode(),
                       ),
                     ],
@@ -342,7 +343,7 @@ class FullScreenPlayer extends StatelessWidget {
                             foregroundColor: AppColors.primaryPurple,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             backgroundColor:
-                                AppColors.primaryPurple.withOpacity(0.1),
+                                AppColors.primaryPurple.withValues(alpha: 0.1),
                             shape: const StadiumBorder()),
                       ),
                       IconButton(
@@ -445,7 +446,7 @@ class _RotatingPlayerArtState extends State<RotatingPlayerArt>
             boxShadow: [
               BoxShadow(
                 color:
-                    AppColors.primaryPurple.withOpacity(isDarkMode ? 0.3 : 0.2),
+                    AppColors.primaryPurple.withValues(alpha: isDarkMode ? 0.3 : 0.2),
                 blurRadius: 50,
                 spreadRadius: 2,
                 offset: const Offset(0, 10),
@@ -530,7 +531,7 @@ class _QueueSheet extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
                       color: isCurrent
-                          ? AppColors.primaryPurple.withOpacity(0.08)
+                          ? AppColors.primaryPurple.withValues(alpha: 0.08)
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(15),
                     ),

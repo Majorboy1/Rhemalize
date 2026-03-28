@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/sermon.dart';
 
@@ -34,7 +35,7 @@ class StorageService {
       );
       await prefs.setString(_sermonsKey, encodedData);
     } catch (e) {
-      print("Error caching sermons: $e");
+      debugPrint("Error caching sermons: $e");
     }
   }
 
@@ -51,7 +52,7 @@ class StorageService {
         return Sermon.fromJson(item as Map<String, dynamic>);
       }).toList();
     } catch (e) {
-      print("Error decoding cached sermons: $e");
+      debugPrint("Error decoding cached sermons: $e");
       // If data is corrupted, clear it to prevent repeated crashes
       await prefs.remove(_sermonsKey);
       return [];

@@ -95,7 +95,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   child: Container(
                     height: 50,
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.1),
+                      color: Colors.grey.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: TextField(
@@ -149,7 +149,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget _buildSortToggle() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.primaryPurple.withOpacity(0.1),
+        color: AppColors.primaryPurple.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(15),
       ),
       child: IconButton(
@@ -195,7 +195,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.auto_stories_outlined,
-                size: 80, color: Colors.grey.withOpacity(0.3)),
+                size: 80, color: Colors.grey.withValues(alpha: 0.3)),
             const SizedBox(height: 20),
             const Text("Your library is empty",
                 style: TextStyle(
@@ -211,3 +211,4 @@ class _LibraryScreenState extends State<LibraryScreen> {
 }
 
 enum SortBy { date, title }
+
