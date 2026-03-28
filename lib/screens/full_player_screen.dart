@@ -445,8 +445,8 @@ class _RotatingPlayerArtState extends State<RotatingPlayerArt>
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color:
-                    AppColors.primaryPurple.withValues(alpha: isDarkMode ? 0.3 : 0.2),
+                color: AppColors.primaryPurple
+                    .withValues(alpha: isDarkMode ? 0.3 : 0.2),
                 blurRadius: 50,
                 spreadRadius: 2,
                 offset: const Offset(0, 10),
@@ -611,4 +611,3 @@ class _QueueSheet extends StatelessWidget {
         child: const Icon(Icons.music_note, color: Colors.grey));
   }
 }
-

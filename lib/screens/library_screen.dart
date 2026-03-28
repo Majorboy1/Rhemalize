@@ -24,9 +24,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final favoritesProvider = context.watch<FavoritesProvider>();
     final allSermons = context.watch<SermonProvider>().sermons;
 
-    final playedSermons = allSermons
-        .where((s) => audioProvider.playedSermonIds.contains(s.id))
-        .toList();
+    final playedSermons = _resolvePlayedHistory(
+      allSermons,
+      audioProvider.recentPlayedIds,
+      audioProvider.playedSermonIds,
+    );
 
     List<Sermon> filtered = playedSermons.where((s) {
       final q = searchQuery.toLowerCase();
@@ -34,9 +36,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
           s.speaker.toLowerCase().contains(q);
     }).toList();
 
-    // Sorting Logic
     if (sortBy == SortBy.date) {
-      filtered.sort((a, b) => b.date.compareTo(a.date));
+      filtered.sort(
+        (a, b) => playedSermons.indexOf(a).compareTo(playedSermons.indexOf(b)),
+      );
     } else {
       filtered.sort((a, b) => a.title.compareTo(b.title));
     }
@@ -47,7 +50,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
           : Colors.white,
       body: CustomScrollView(
         slivers: [
-          // 1. Sleek Modern Header
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(
@@ -69,19 +71,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               _showClearHistoryDialog(audioProvider),
                           icon: const Icon(Icons.delete_sweep_outlined,
                               size: 20, color: Colors.redAccent),
-                          label: const Text("Clear",
-                              style: TextStyle(color: Colors.redAccent)),
+                          label: const Text(
+                            'Clear',
+                            style: TextStyle(color: Colors.redAccent),
+                          ),
                         ),
                     ],
                   ),
-                  const Text("Your listening journey so far",
-                      style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  const Text(
+                    'Your listening journey so far',
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
                 ],
               ),
             ),
           ),
-
-          // 2. Search & Filter Bar (Sticky-style feel)
           SliverAppBar(
             pinned: true,
             elevation: 0,
@@ -114,8 +118,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ],
             ),
           ),
-
-          // 3. Content Logic
           playedSermons.isEmpty
               ? SliverFillRemaining(child: _buildEmptyState())
               : SliverPadding(
@@ -131,7 +133,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             sermon: s,
                             isFavorite: favoritesProvider.isFavorite(s.id),
                             onPlay: () => audioProvider.playSermon(
-                                s, filtered, PlaybackContext.library),
+                              s,
+                              filtered,
+                              PlaybackContext.library,
+                            ),
                             onToggleFavorite: () =>
                                 favoritesProvider.toggleFavorite(s.id),
                           ),
@@ -146,6 +151,39 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  // Build history from played order first, then backfill older saved entries.
+  // When an episode ID appears here, we collapse it to its parent sermon once.
+  List<Sermon> _resolvePlayedHistory(
+    List<Sermon> allSermons,
+    List<String> recentIds,
+    Set<String> playedSermonIds,
+  ) {
+    final history = <Sermon>[];
+    final seenIds = <String>{};
+
+    for (final playedId in recentIds) {
+      for (final sermon in allSermons) {
+        final isDirectMatch = sermon.id == playedId;
+        final isEpisodeMatch = sermon.episodes.any((e) => e.id == playedId);
+        if (!isDirectMatch && !isEpisodeMatch) {
+          continue;
+        }
+        if (seenIds.add(sermon.id)) {
+          history.add(sermon);
+        }
+        break;
+      }
+    }
+
+    for (final sermon in allSermons) {
+      if (playedSermonIds.contains(sermon.id) && seenIds.add(sermon.id)) {
+        history.add(sermon);
+      }
+    }
+
+    return history;
+  }
+
   Widget _buildSortToggle() {
     return Container(
       decoration: BoxDecoration(
@@ -154,7 +192,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
       child: IconButton(
         icon: Icon(
-          sortBy == SortBy.date ? Icons.calendar_today : Icons.sort_by_alpha,
+          sortBy == SortBy.date ? Icons.history : Icons.sort_by_alpha,
           color: AppColors.primaryPurple,
         ),
         onPressed: () {
@@ -170,20 +208,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Clear History?"),
+        title: const Text('Clear History?'),
         content: const Text(
-            "This will remove all recently played sermons from your library."),
+          'This will remove all recently played sermons from your library.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel")),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
-              audio
-                  .clearPlayedHistory(); // Ensure this method exists in your AudioProvider
+              audio.clearPlayedHistory();
               Navigator.pop(context);
             },
-            child: const Text("Clear All", style: TextStyle(color: Colors.red)),
+            child: const Text('Clear All', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -194,21 +233,28 @@ class _LibraryScreenState extends State<LibraryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.auto_stories_outlined,
-                size: 80, color: Colors.grey.withValues(alpha: 0.3)),
+            Icon(
+              Icons.auto_stories_outlined,
+              size: 80,
+              color: Colors.grey.withValues(alpha: 0.3),
+            ),
             const SizedBox(height: 20),
-            const Text("Your library is empty",
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey)),
+            const Text(
+              'Your library is empty',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
             const SizedBox(height: 8),
-            const Text("Start listening to build your collection.",
-                style: TextStyle(color: Colors.grey)),
+            const Text(
+              'Start listening to build your collection.',
+              style: TextStyle(color: Colors.grey),
+            ),
           ],
         ),
       );
 }
 
 enum SortBy { date, title }
-
