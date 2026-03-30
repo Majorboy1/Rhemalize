@@ -7,6 +7,9 @@ import '../providers/auth_provider.dart';
 import '../utils/app_colors.dart';
 import '../services/storage_service.dart';
 import 'about_us_screen.dart';
+import 'admin/dashboard_screen.dart';
+import 'admin/analytics_screen.dart';
+import 'admin/settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userName;
@@ -70,30 +73,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (showGrowth) _buildStreakTile(),
             _buildSectionHeader('Account & App'),
             _buildEngagementCard(audio, recentHistory, isDark),
-            _buildSectionHeader('Engagement'),
-            _buildActionCard([
-              _menuItem(
-                icon: Icons.history_rounded,
-                title: 'Listening History',
-                color: Colors.blueAccent,
-                onTap: () => _showListeningHistorySheet(audio, recentHistory),
-              ),
-              _menuItem(
-                icon: Icons.church_rounded,
-                title: 'Ministry Mission',
-                color: Colors.amber,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AboutUsScreen()),
-                ),
-              ),
-              _menuItem(
-                icon: Icons.tune_rounded,
-                title: 'App Settings',
-                color: Colors.purpleAccent,
-                onTap: () => _showSettingsSheet(isDark),
-              ),
-            ], isDark),
+            _buildSectionHeader(
+                widget.isAdminProfile ? 'Admin Tools' : 'Engagement'),
+            _buildActionCard(
+              widget.isAdminProfile
+                  ? [
+                      _menuItem(
+                        icon: Icons.dashboard_customize_rounded,
+                        title: 'Dashboard Overview',
+                        color: Colors.deepPurple,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const DashboardScreen()),
+                        ),
+                      ),
+                      _menuItem(
+                        icon: Icons.insights_rounded,
+                        title: 'Analytics & Insights',
+                        color: Colors.blueAccent,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AnalyticsScreen()),
+                        ),
+                      ),
+                      _menuItem(
+                        icon: Icons.tune_rounded,
+                        title: 'Admin Settings',
+                        color: Colors.purpleAccent,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const SettingsScreen()),
+                        ),
+                      ),
+                      _menuItem(
+                        icon: Icons.church_rounded,
+                        title: 'Ministry Mission',
+                        color: Colors.amber,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AboutUsScreen()),
+                        ),
+                      ),
+                    ]
+                  : [
+                      _menuItem(
+                        icon: Icons.history_rounded,
+                        title: 'Listening History',
+                        color: Colors.blueAccent,
+                        onTap: () =>
+                            _showListeningHistorySheet(audio, recentHistory),
+                      ),
+                      _menuItem(
+                        icon: Icons.church_rounded,
+                        title: 'Ministry Mission',
+                        color: Colors.amber,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AboutUsScreen()),
+                        ),
+                      ),
+                      _menuItem(
+                        icon: Icons.tune_rounded,
+                        title: 'App Settings',
+                        color: Colors.purpleAccent,
+                        onTap: () => _showSettingsSheet(isDark),
+                      ),
+                    ],
+              isDark,
+            ),
             const SizedBox(height: 32),
             _logoutButton(),
             _appVersion(),
@@ -440,7 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: EdgeInsets.symmetric(vertical: 24),
       child: Opacity(
         opacity: 0.4,
-        child: Text('Rhemalize v1.2.0 • Built by Wisdom Magnus • 2026',
+        child: Text('Rhemalize v1.2.0 â€¢ Built by Wisdom Magnus â€¢ 2026',
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
       ),
     );
@@ -566,7 +618,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         title: Text(sermons[i].title,
                             maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle: Text(sermons[i].seriesTitle != null
-                            ? '${sermons[i].seriesTitle} • ${sermons[i].speaker}'
+                            ? '${sermons[i].seriesTitle} â€¢ ${sermons[i].speaker}'
                             : sermons[i].speaker),
                         onTap: () {
                           audio.playSermon(
@@ -606,10 +658,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-
-
-
-
-
-
-

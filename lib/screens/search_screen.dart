@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/sermon.dart';
 import '../providers/audio_provider.dart';
 import '../providers/favorites_provider.dart';
@@ -26,10 +27,15 @@ class _SearchScreenState extends State<SearchScreen> {
     _loadSearchHistory();
   }
 
+  String _historyKey() {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'signed_out';
+    return 'search_history_$uid';
+  }
+
   Future<void> _loadSearchHistory() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _searchHistory = prefs.getStringList('search_history') ?? [];
+      _searchHistory = prefs.getStringList(_historyKey()) ?? [];
     });
   }
 
@@ -42,7 +48,7 @@ class _SearchScreenState extends State<SearchScreen> {
     if (_searchHistory.length > 5) {
       _searchHistory = _searchHistory.sublist(0, 5);
     }
-    await prefs.setStringList('search_history', _searchHistory);
+    await prefs.setStringList(_historyKey(), _searchHistory);
     setState(() {});
   }
 
@@ -127,8 +133,9 @@ class _SearchScreenState extends State<SearchScreen> {
                   color: AppColors.primaryPurple,
                 ),
                 filled: true,
-                fillColor:
-                    isDark ? Colors.white.withValues(alpha: 0.06) : Colors.grey.shade50,
+                fillColor: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.grey.shade50,
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 border: OutlineInputBorder(
@@ -173,8 +180,9 @@ class _SearchScreenState extends State<SearchScreen> {
             color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color:
-                  isDark ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.08)
+                  : Colors.transparent,
             ),
             boxShadow: [
               BoxShadow(
@@ -279,8 +287,9 @@ class _SearchScreenState extends State<SearchScreen> {
                                   ? '${sermon.speaker} - ${sermon.episodes.length} episodes'
                                   : '${sermon.speaker} - Single Message',
                               style: TextStyle(
-                                color:
-                                    isDark ? Colors.white60 : Colors.grey.shade600,
+                                color: isDark
+                                    ? Colors.white60
+                                    : Colors.grey.shade600,
                                 fontSize: 14,
                               ),
                             ),
@@ -437,4 +446,3 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 }
-
