@@ -1,17 +1,15 @@
 # Rhemalize
 
-Rhemalize is a Flutter-based church audio app built for discovering, streaming, and managing sermon content across mobile and web. It combines a polished listener experience with an admin workflow for uploading sermons, organizing series, and managing ministry content from Firebase-backed services.
+Rhemalize is a Flutter sermon streaming app for listening, discovering, and managing church audio content across listener and admin experiences. The app combines a polished playback flow with Firebase-backed content management, user auth, search, favorites, listening history, and ministry administration tools.
 
-## Highlights
+## Product Overview
 
-- Google and email authentication with Firebase Auth
-- Sermon streaming with background playback support
-- Continue listening and listening history
-- Favorites and personal library
-- Search and browse flows for sermon discovery
-- Admin tools for uploading single messages and series
-- Firestore-powered content and user data
-- Firebase Storage for hosted audio files and media assets
+- Listener home, discovery, search, favorites, library, and playback flows
+- Background sermon playback with continue listening support
+- Account-aware listening history and playback persistence
+- Google sign-in and email authentication with Firebase
+- Admin tools for sermon uploads, series management, pastors, users, dashboard, analytics, and settings
+- Firebase-backed content, storage, and push-notification plumbing
 
 ## Tech Stack
 
@@ -22,110 +20,107 @@ Rhemalize is a Flutter-based church audio app built for discovering, streaming, 
 - Firebase Storage
 - Firebase Messaging
 - just_audio
+- just_audio_background
 - shared_preferences
 
 ## Project Structure
 
 ```text
 lib/
-  models/        Data models for sermons, users, pastors, and episodes
-  providers/     App state, auth, audio, favorites, and sermon data
-  screens/       Listener and admin UI screens
-  services/      Storage, connectivity, and audio helpers
-  widgets/       Reusable UI components and modals
+  models/        Sermons, users, pastors, and episode models
+  providers/     Auth, audio, favorites, theme, and sermon state
+  screens/       Listener and admin screens
+  services/      Audio, storage, connectivity, and notification helpers
+  widgets/       Shared UI widgets, cards, and modals
 assets/
-  images/        App artwork and ministry images
+  images/        Logos, artwork, and ministry photos
   audio/         Bundled audio assets
+android/         Android release and manifest configuration
+ios/             iOS runner, workspace, and platform configuration
 ```
 
-## Getting Started
+## Local Setup
 
-### Prerequisites
+### Requirements
 
 - Flutter SDK 3.x
 - Dart SDK 3.x
-- Firebase project configured for the target platforms
+- Firebase project with Auth, Firestore, Storage, and Messaging enabled
 - Android Studio or VS Code with Flutter tooling
+- CocoaPods installed for iOS builds
 
-### Install
+### Install Dependencies
 
 ```bash
 flutter pub get
 ```
 
-### Configure Firebase
+### iOS Dependencies
 
-1. Create or select a Firebase project.
-2. Enable Authentication, Firestore, Storage, and Messaging.
-3. Add Android, iOS, and Web apps in Firebase.
-4. Generate the FlutterFire config for this project.
-5. Confirm `lib/firebase_options.dart` matches your Firebase project.
+```bash
+cd ios
+pod install
+cd ..
+```
 
-### Run the App
+### Run The App
 
 ```bash
 flutter run
 ```
 
-### Analyze the Codebase
+### Static Analysis
 
 ```bash
 flutter analyze
 ```
 
-## Core Features
+## Firebase Configuration
 
-### Listener Experience
+Rhemalize uses generated FlutterFire options at `lib/firebase_options.dart`. Before release, confirm that each platform registered in Firebase matches the real production app identifiers.
 
-- Sign in with Google or email/password
-- Browse recent sermons and featured content
-- Search sermons and series
-- Save favorites
-- Resume playback from the last saved position
-- Keep listening history in the library until it is cleared manually
+- Android app ID should match `com.rhemalize.app`
+- iOS app registration should match the final production bundle identifier
+- Google Sign-In OAuth clients should be created for every release platform
+- Release SHA-1 and SHA-256 certificates should be added in Firebase for Android Google Sign-In
+- APNs key or certificate should be configured for iOS messaging
 
-### Admin Experience
+## Release Readiness
 
-- Upload one-time messages
-- Upload and manage sermon series
-- Manage pastors and user-related content
-- Review ministry content from dedicated admin screens
+### Play Store
 
-## Firebase Notes
-
-This app depends heavily on Firebase services. Before production release, verify:
-
-- Authentication providers are enabled
-- Firestore security rules are production-ready
-- Storage rules restrict uploads appropriately
-- Cloud Messaging is configured for supported platforms
-- All production package names, SHA certificates, and OAuth client IDs are correct
-
-## Play Store Readiness Checklist
-
-Before uploading to Google Play Console, make sure the following are complete:
-
-- Update the app `version` and build number in `pubspec.yaml`
-- Confirm the Android application ID and signing config
-- Replace placeholder graphics with final launcher icon, feature graphic, and screenshots
-- Test Google Sign-In in release mode with production SHA-1 and SHA-256 fingerprints
-- Review privacy policy and data safety disclosures
-- Verify audio playback, login, search, favorites, and library flows on a physical Android device
-- Verify Firebase rules for production access control
-- Remove debug logging that should not ship to production
-- Build and test an Android App Bundle:
+- Update store listing copy, screenshots, feature graphic, and privacy policy
+- Build and test a signed App Bundle
+- Verify Firebase Auth, playback, search, library, favorites, and admin flows on a physical Android device
+- Confirm notification behavior on Android 13+ with `POST_NOTIFICATIONS`
+- Review Data Safety disclosures for auth, analytics, and notifications
 
 ```bash
 flutter build appbundle --release
 ```
 
-## Recommended Next Steps
+### App Store
 
-- Add widget and integration tests for auth, playback, and library persistence
-- Sweep deprecated Flutter API usage such as `withOpacity`
-- Replace deprecated sharing calls with the current `share_plus` API
-- Do a final QA pass on admin flows and release-mode authentication
+- Finalize the production iOS bundle identifier in Apple Developer and Firebase
+- Re-run FlutterFire config if the iOS bundle identifier changes
+- Install CocoaPods dependencies and build on a macOS machine with Xcode
+- Verify Google Sign-In callback handling, background audio, and push notifications
+- Complete App Privacy answers, screenshots, and age rating in App Store Connect
+
+```bash
+flutter build ios --release
+```
+
+## QA Checklist
+
+- Sign in with Google and email/password
+- Confirm the profile avatar and account metadata load correctly
+- Play a sermon, close the app, and confirm resume playback works
+- Confirm library history survives logout and only clears manually
+- Verify admin playback does not pollute user history or analytics
+- Upload and edit sermons, episodes, series, pastors, and user-facing content from the admin area
+- Review dashboard, analytics, and settings in admin on real data
 
 ## Status
 
-The app is close to releaseable, but it still benefits from one more stabilization pass focused on cleanup, release QA, and Play Store submission assets.
+The codebase is analyzer-clean and in a much stronger release state. The remaining production-critical work is mostly external release setup: final store assets, Apple/Firebase production identifiers, signing, and device QA.
