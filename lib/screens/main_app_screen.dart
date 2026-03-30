@@ -126,13 +126,6 @@ class _MainAppState extends State<MainApp> {
               children: [
                 // The main page content
                 currentScreen,
-
-                // --- 3D SPINNING LOGO BADGE ---
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + 6,
-                  left: 4,
-                  child: const SpinningRhemaLogo(size: 36, innerPadding: 6),
-                ),
               ],
             ),
           ),
@@ -169,77 +162,3 @@ class _MainAppState extends State<MainApp> {
     );
   }
 }
-
-// --- SPINNING LOGO COMPONENT (Keep as is) ---
-class SpinningRhemaLogo extends StatefulWidget {
-  const SpinningRhemaLogo({
-    super.key,
-    this.size = 48,
-    this.innerPadding = 8,
-  });
-
-  final double size;
-  final double innerPadding;
-
-  @override
-  State<SpinningRhemaLogo> createState() => _SpinningRhemaLogoState();
-}
-
-class _SpinningRhemaLogoState extends State<SpinningRhemaLogo>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform(
-          alignment: Alignment.center,
-          transform: Matrix4.identity()
-            ..setEntry(3, 2, 0.002)
-            ..rotateY(_controller.value * 2 * 3.14159),
-          child: child,
-        );
-      },
-      child: Container(
-        height: 48,
-        width: 48,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 12,
-              spreadRadius: 2,
-            )
-          ],
-        ),
-        child: Image.asset(
-          'assets/images/rhema-logo.png',
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) =>
-              const Icon(Icons.auto_awesome, color: Colors.amber, size: 28),
-        ),
-      ),
-    );
-  }
-}
-

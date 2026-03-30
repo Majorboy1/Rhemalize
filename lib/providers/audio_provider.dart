@@ -1,4 +1,5 @@
-import 'dart:async';
+﻿import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -32,6 +33,7 @@ class AudioProvider with ChangeNotifier {
 
   static const String _playedKey = 'played_sermon_ids';
   static const String _playedOrderKey = 'played_sermon_order';
+  static const String _playedSnapshotKey = 'played_sermon_snapshots';
   static const String _lastListenKey = 'last_listen_date';
   static const String _positionPrefix = 'resume_pos_';
   static const String _lastResumeKey = 'last_resume_id';
@@ -55,6 +57,7 @@ class AudioProvider with ChangeNotifier {
 
   final Set<String> _playedIds = {};
   final List<String> _playedOrder = [];
+  final Map<String, Sermon> _playedHistoryCache = {};
   final Map<String, int> _resumePositions = {};
   DateTime _lastListenDate = DateTime.now();
   String? _lastResumableId;
@@ -86,6 +89,8 @@ class AudioProvider with ChangeNotifier {
   bool get showFullPlayer => _showFullPlayer;
   Set<String> get playedSermonIds => _playedIds;
   List<String> get recentPlayedIds => List.unmodifiable(_playedOrder);
+  Map<String, Sermon> get playedHistoryCache =>
+      Map.unmodifiable(_playedHistoryCache);
   DateTime get lastListenDate => _lastListenDate;
   String? get lastResumableId => _lastResumableId;
   bool get isShuffleOn => _isShuffleOn;
@@ -167,6 +172,7 @@ class AudioProvider with ChangeNotifier {
       _currentEpisode = matchedEpisode;
       _handleNewPlay(
         matchedEpisode.id,
+        sermonSnapshot: _currentSermon!,
         isEpisode: true,
         parentSermonId: _currentSermon!.id,
       );
@@ -182,7 +188,11 @@ class AudioProvider with ChangeNotifier {
 
       _currentSermon = matchedSermon;
       _currentEpisode = null;
-      _handleNewPlay(matchedSermon.id, isEpisode: false);
+      _handleNewPlay(
+        matchedSermon.id,
+        sermonSnapshot: matchedSermon,
+        isEpisode: false,
+      );
     }
 
     notifyListeners();
@@ -212,13 +222,21 @@ class AudioProvider with ChangeNotifier {
   }
 // ================= STREAK & FIRESTORE LOGIC =================
 
-  void _handleNewPlay(String id,
-      {bool isEpisode = false, String? parentSermonId}) {
+  void _handleNewPlay(
+    String id, {
+    required Sermon sermonSnapshot,
+    bool isEpisode = false,
+    String? parentSermonId,
+  }) {
     if (_lastTrackId == id) return;
 
     final sermonId = isEpisode ? parentSermonId : id;
     if (sermonId != null) {
-      _rememberPlaybackLocally(trackId: id, sermonId: sermonId);
+      _rememberPlaybackLocally(
+        trackId: id,
+        sermonId: sermonId,
+        sermonSnapshot: sermonSnapshot,
+      );
     }
 
     _lastTrackId = id;
@@ -231,10 +249,16 @@ class AudioProvider with ChangeNotifier {
   void _rememberPlaybackLocally({
     required String trackId,
     required String sermonId,
+    required Sermon sermonSnapshot,
   }) {
     _playedIds.add(sermonId);
     _playedOrder.remove(trackId);
     _playedOrder.insert(0, trackId);
+    _cachePlayedSermon(
+      trackId: trackId,
+      sermonId: sermonId,
+      sermon: sermonSnapshot,
+    );
     unawaited(_savePlayedHistory());
     notifyListeners();
   }
@@ -253,6 +277,13 @@ class AudioProvider with ChangeNotifier {
     _playedIds.add(sermonId);
     _playedOrder.remove(trackId);
     _playedOrder.insert(0, trackId);
+    if (_currentSermon != null) {
+      _cachePlayedSermon(
+        trackId: trackId,
+        sermonId: sermonId,
+        sermon: _currentSermon!,
+      );
+    }
     _resumePositions[trackId] = _position.inMilliseconds;
     _lastResumableId = trackId;
 
@@ -287,6 +318,17 @@ class AudioProvider with ChangeNotifier {
     );
 
     notifyListeners();
+  }
+
+  void _cachePlayedSermon({
+    required String trackId,
+    required String sermonId,
+    required Sermon sermon,
+  }) {
+    // Keep snapshots by both track id and sermon id so history remains
+    // visible even if auth state or the live sermon feed changes.
+    _playedHistoryCache[trackId] = sermon;
+    _playedHistoryCache[sermonId] = sermon;
   }
 
   Future<void> _updateStreakInFirestore() async {
@@ -422,7 +464,11 @@ class AudioProvider with ChangeNotifier {
         originalList: List.from(currentList));
     _currentSermon = sermon;
     _currentEpisode = null;
-    _handleNewPlay(sermon.id, isEpisode: false);
+    _handleNewPlay(
+      sermon.id,
+      sermonSnapshot: sermon,
+      isEpisode: false,
+    );
 
     final playableSermons =
         _session!.originalList.where((s) => s.audioUrl.isNotEmpty).toList();
@@ -463,7 +509,12 @@ class AudioProvider with ChangeNotifier {
         originalList: List.from(currentList));
     _currentSermon = series;
     _currentEpisode = episode;
-    _handleNewPlay(episode.id, isEpisode: true, parentSermonId: series.id);
+    _handleNewPlay(
+      episode.id,
+      sermonSnapshot: series,
+      isEpisode: true,
+      parentSermonId: series.id,
+    );
 
     final playableEpisodes =
         series.episodes.where((e) => e.audioUrl.isNotEmpty).toList();
@@ -635,6 +686,7 @@ class AudioProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final List<String>? savedIds = prefs.getStringList(_playedKey);
     final List<String>? savedOrder = prefs.getStringList(_playedOrderKey);
+    final String? snapshotJson = prefs.getString(_playedSnapshotKey);
     if (savedIds != null) _playedIds.addAll(savedIds);
     if (savedOrder != null && savedOrder.isNotEmpty) {
       _playedOrder.addAll(savedOrder);
@@ -656,6 +708,18 @@ class AudioProvider with ChangeNotifier {
         _resumePositions[_lastResumableId!] = resumeMs;
       }
     }
+    if (snapshotJson != null && snapshotJson.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(snapshotJson) as Map<String, dynamic>;
+        decoded.forEach((key, value) {
+          if (value is Map<String, dynamic>) {
+            _playedHistoryCache[key] = Sermon.fromJson(value);
+          }
+        });
+      } catch (e) {
+        debugPrint('Failed to load played sermon snapshots: ');
+      }
+    }
     notifyListeners();
   }
 
@@ -663,6 +727,14 @@ class AudioProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_playedKey, _playedIds.toList());
     await prefs.setStringList(_playedOrderKey, _playedOrder);
+    await prefs.setString(
+      _playedSnapshotKey,
+      jsonEncode(
+        _playedHistoryCache.map(
+          (key, value) => MapEntry(key, value.toJson()),
+        ),
+      ),
+    );
   }
 
   Future<void> clearPlayedHistory() async {
@@ -673,11 +745,13 @@ class AudioProvider with ChangeNotifier {
     };
     _playedIds.clear();
     _playedOrder.clear();
+    _playedHistoryCache.clear();
     _resumePositions.clear();
     _lastResumableId = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_playedKey);
     await prefs.remove(_playedOrderKey);
+    await prefs.remove(_playedSnapshotKey);
     await prefs.remove(_lastResumeKey);
     for (final id in idsToClear) {
       await prefs.remove('$_positionPrefix$id');
@@ -713,6 +787,3 @@ class AudioProvider with ChangeNotifier {
     }
   }
 }
-
-
-
