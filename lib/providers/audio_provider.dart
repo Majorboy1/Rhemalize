@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
@@ -30,6 +30,7 @@ class PlaybackSession {
 class AudioProvider with ChangeNotifier {
   final AudioService _audioService = AudioService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  StreamSubscription<User?>? _authSubscription;
 
   static const String _playedKey = 'played_sermon_ids';
   static const String _playedOrderKey = 'played_sermon_order';
@@ -67,16 +68,82 @@ class AudioProvider with ChangeNotifier {
   String? _pendingHistorySermonId;
   bool _pendingHistoryIsEpisode = false;
   bool _pendingHistoryCommitted = false;
+  String _historyScope = 'signed_out';
+  bool _currentUserIsAdmin = false;
 
   AudioProvider() {
     _initAudio();
     _listenToStates();
-    _loadPlayedHistory();
+    _listenToAuthChanges();
   }
 
   Future<void> _initAudio() async {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration.music());
+  }
+
+  void _listenToAuthChanges() {
+    _authSubscription = FirebaseAuth.instance.authStateChanges().listen((user) {
+      unawaited(_switchHistoryScope(user));
+    });
+  }
+
+  Future<void> _switchHistoryScope(User? user) async {
+    final nextScope = user?.uid ?? 'signed_out';
+
+    if (nextScope != _historyScope) {
+      await _savePlayedHistory();
+      stop();
+      _resetHistoryState();
+      _historyScope = nextScope;
+      _currentUserIsAdmin = false;
+      notifyListeners();
+    }
+
+    final nextIsAdmin = await _resolveIsAdminAccount(user);
+    if (nextScope == _historyScope &&
+        nextIsAdmin == _currentUserIsAdmin &&
+        _playedIds.isNotEmpty) {
+      return;
+    }
+
+    _historyScope = nextScope;
+    _currentUserIsAdmin = nextIsAdmin;
+    await _loadPlayedHistory();
+  }
+
+  Future<bool> _resolveIsAdminAccount(User? user) async {
+    if (user == null) return false;
+
+    final email = user.email?.trim().toLowerCase();
+    if (email == null || email.isEmpty) return false;
+
+    try {
+      final adminDoc = await _firestore.collection('admins').doc(email).get();
+      if (adminDoc.exists) {
+        return true;
+      }
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final role = (userDoc.data()?['role'] ?? '').toString().toLowerCase();
+      return role == 'admin';
+    } catch (e) {
+      debugPrint('Failed to resolve account role: $e');
+      return false;
+    }
+  }
+
+  String _scopedKey(String base) => '${base}_$_historyScope';
+
+  String _positionKey(String id) => '$_positionPrefix${_historyScope}_$id';
+
+  void _resetHistoryState() {
+    _playedIds.clear();
+    _playedOrder.clear();
+    _playedHistoryCache.clear();
+    _resumePositions.clear();
+    _lastListenDate = DateTime.now();
+    _lastResumableId = null;
   }
 
   // ================= GETTERS =================
@@ -207,7 +274,7 @@ class AudioProvider with ChangeNotifier {
       final id = _currentEpisode?.id ?? _currentSermon?.id;
       if (id != null && _isPlaying && _position.inSeconds > 0) {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('$_positionPrefix$id', _position.inMilliseconds);
+        await prefs.setInt(_positionKey(id), _position.inMilliseconds);
       }
     });
   }
@@ -218,7 +285,7 @@ class AudioProvider with ChangeNotifier {
 
   Future<void> _clearSavedPosition(String id) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('$_positionPrefix$id');
+    await prefs.remove(_positionKey(id));
   }
 // ================= STREAK & FIRESTORE LOGIC =================
 
@@ -296,7 +363,7 @@ class AudioProvider with ChangeNotifier {
   Future<void> _saveLastResumableId(String id) async {
     final prefs = await SharedPreferences.getInstance();
     _lastResumableId = id; // Update local variable
-    await prefs.setString(_lastResumeKey, id);
+    await prefs.setString(_scopedKey(_lastResumeKey), id);
     notifyListeners();
   }
 
@@ -309,6 +376,11 @@ class AudioProvider with ChangeNotifier {
 
     // 3. Update the date and Firestore stats
     await _updateLastListenDate();
+    if (_currentUserIsAdmin) {
+      notifyListeners();
+      return;
+    }
+
     await _updateStreakInFirestore();
 
     _recordListenToFirestore(
@@ -333,7 +405,7 @@ class AudioProvider with ChangeNotifier {
 
   Future<void> _updateStreakInFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null || _currentUserIsAdmin) return;
     final userRef = _firestore.collection('users').doc(user.uid);
 
     try {
@@ -375,7 +447,7 @@ class AudioProvider with ChangeNotifier {
   void _recordListenToFirestore(String id, bool isEpisode,
       {String? parentSermonId}) {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    if (userId == null || _currentUserIsAdmin) return;
 
     unawaited(_firestore.collection('listens').add({
       'contentId': id,
@@ -560,7 +632,7 @@ class AudioProvider with ChangeNotifier {
       // 1. Check for saved position
       final id = _currentEpisode?.id ?? _currentSermon?.id;
       final prefs = await SharedPreferences.getInstance();
-      final savedMs = prefs.getInt('$_positionPrefix$id') ?? 0;
+      final savedMs = id == null ? 0 : prefs.getInt(_positionKey(id)) ?? 0;
       final initialPosition = Duration(milliseconds: savedMs);
 
       final safeIndex = (initialIndex >= 0 && initialIndex < playlist.length)
@@ -633,6 +705,7 @@ class AudioProvider with ChangeNotifier {
   @override
   void dispose() {
     _stopPositionTracking();
+    _authSubscription?.cancel();
     super.dispose();
   }
 
@@ -678,15 +751,18 @@ class AudioProvider with ChangeNotifier {
   Future<void> _updateLastListenDate() async {
     final prefs = await SharedPreferences.getInstance();
     _lastListenDate = DateTime.now();
-    await prefs.setString(_lastListenKey, _lastListenDate.toIso8601String());
+    await prefs.setString(
+        _scopedKey(_lastListenKey), _lastListenDate.toIso8601String());
     notifyListeners();
   }
 
   Future<void> _loadPlayedHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String>? savedIds = prefs.getStringList(_playedKey);
-    final List<String>? savedOrder = prefs.getStringList(_playedOrderKey);
-    final String? snapshotJson = prefs.getString(_playedSnapshotKey);
+    final List<String>? savedIds = prefs.getStringList(_scopedKey(_playedKey));
+    final List<String>? savedOrder =
+        prefs.getStringList(_scopedKey(_playedOrderKey));
+    final String? snapshotJson =
+        prefs.getString(_scopedKey(_playedSnapshotKey));
     if (savedIds != null) _playedIds.addAll(savedIds);
     if (savedOrder != null && savedOrder.isNotEmpty) {
       _playedOrder.addAll(savedOrder);
@@ -694,16 +770,16 @@ class AudioProvider with ChangeNotifier {
       _playedOrder.addAll(savedIds);
     }
     for (final id in _playedOrder) {
-      final savedMs = prefs.getInt('$_positionPrefix$id');
+      final savedMs = prefs.getInt(_positionKey(id));
       if (savedMs != null && savedMs > 0) {
         _resumePositions[id] = savedMs;
       }
     }
-    final String? dateStr = prefs.getString(_lastListenKey);
+    final String? dateStr = prefs.getString(_scopedKey(_lastListenKey));
     if (dateStr != null) _lastListenDate = DateTime.parse(dateStr);
-    _lastResumableId = prefs.getString(_lastResumeKey);
+    _lastResumableId = prefs.getString(_scopedKey(_lastResumeKey));
     if (_lastResumableId != null) {
-      final resumeMs = prefs.getInt('$_positionPrefix$_lastResumableId');
+      final resumeMs = prefs.getInt(_positionKey(_lastResumableId!));
       if (resumeMs != null && resumeMs > 0) {
         _resumePositions[_lastResumableId!] = resumeMs;
       }
@@ -725,10 +801,10 @@ class AudioProvider with ChangeNotifier {
 
   Future<void> _savePlayedHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_playedKey, _playedIds.toList());
-    await prefs.setStringList(_playedOrderKey, _playedOrder);
+    await prefs.setStringList(_scopedKey(_playedKey), _playedIds.toList());
+    await prefs.setStringList(_scopedKey(_playedOrderKey), _playedOrder);
     await prefs.setString(
-      _playedSnapshotKey,
+      _scopedKey(_playedSnapshotKey),
       jsonEncode(
         _playedHistoryCache.map(
           (key, value) => MapEntry(key, value.toJson()),
@@ -749,12 +825,12 @@ class AudioProvider with ChangeNotifier {
     _resumePositions.clear();
     _lastResumableId = null;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_playedKey);
-    await prefs.remove(_playedOrderKey);
-    await prefs.remove(_playedSnapshotKey);
-    await prefs.remove(_lastResumeKey);
+    await prefs.remove(_scopedKey(_playedKey));
+    await prefs.remove(_scopedKey(_playedOrderKey));
+    await prefs.remove(_scopedKey(_playedSnapshotKey));
+    await prefs.remove(_scopedKey(_lastResumeKey));
     for (final id in idsToClear) {
-      await prefs.remove('$_positionPrefix$id');
+      await prefs.remove(_positionKey(id));
     }
     notifyListeners();
   }
