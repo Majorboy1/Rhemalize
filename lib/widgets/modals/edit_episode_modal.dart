@@ -1,13 +1,15 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../models/sermon.dart';
 import '../../providers/sermon_provider.dart';
-import '../../utils/app_constants.dart';
 import '../../utils/app_colors.dart';
+import '../../utils/pastor_directory.dart';
 
 class EditEpisodeModal extends StatefulWidget {
   final String seriesId;
@@ -28,12 +30,15 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
   late TextEditingController _descController;
   late String _selectedSpeaker;
 
+  List<String> _speakerOptions = PastorDirectory.fallbackSpeakerNames;
+
   File? _newAudioFile;
   Uint8List? _webAudioBytes;
   String? _selectedFileName;
 
   bool _isSaving = false;
   bool _isPicking = false;
+  bool _isLoadingPastors = true;
   double _uploadProgress = 0.0;
 
   @override
@@ -41,11 +46,21 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
     super.initState();
     _titleController = TextEditingController(text: widget.episode.title);
     _descController = TextEditingController(text: widget.episode.description);
-
     _selectedSpeaker = widget.episode.speaker;
-    if (!AppConstants.availablePastors.contains(_selectedSpeaker)) {
-      _selectedSpeaker = AppConstants.seniorPastorName;
-    }
+    _loadSpeakers();
+  }
+
+  Future<void> _loadSpeakers() async {
+    final speakerOptions = await PastorDirectory.loadSpeakerNames();
+    if (!mounted) return;
+
+    setState(() {
+      _speakerOptions = speakerOptions;
+      if (!_speakerOptions.contains(_selectedSpeaker)) {
+        _selectedSpeaker = _speakerOptions.first;
+      }
+      _isLoadingPastors = false;
+    });
   }
 
   @override
@@ -58,7 +73,7 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
   Future<void> _pickAudio() async {
     setState(() => _isPicking = true);
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.platform.pickFiles(
         type: FileType.audio,
         withData: kIsWeb,
       );
@@ -68,22 +83,26 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
           _selectedFileName = result.files.single.name;
           if (kIsWeb) {
             _webAudioBytes = result.files.single.bytes;
+            _newAudioFile = null;
           } else {
             _newAudioFile = File(result.files.single.path!);
+            _webAudioBytes = null;
           }
         });
       }
     } catch (e) {
-      debugPrint("Picker Error: $e");
+      debugPrint('Picker Error: $e');
     } finally {
-      setState(() => _isPicking = false);
+      if (mounted) {
+        setState(() => _isPicking = false);
+      }
     }
   }
 
   void _handleSave() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Title cannot be empty")),
+        const SnackBar(content: Text('Title cannot be empty')),
       );
       return;
     }
@@ -107,36 +126,36 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
             },
           );
 
-      if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Episode updated successfully!")),
-        );
-      }
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Episode updated successfully!')),
+      );
     } catch (e) {
-      if (mounted) {
-        setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error updating episode: $e")),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error updating episode: $e')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDarkMode ? Colors.white : Colors.black;
 
     return Container(
       padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-          top: 12,
-          left: 24,
-          right: 24),
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        top: 12,
+        left: 24,
+        right: 24,
+      ),
       decoration: BoxDecoration(
-          color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30))),
+        color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+      ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -153,31 +172,59 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
                 ),
               ),
             ),
-            Text("Edit Episode",
-                style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: textColor)),
+            Text(
+              'Edit Episode',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
             const SizedBox(height: 25),
             _buildField(
-                _titleController, "Episode Title", Icons.title, isDarkMode),
+              _titleController,
+              'Episode Title',
+              Icons.title,
+              isDarkMode,
+            ),
             DropdownButtonFormField<String>(
               initialValue: _selectedSpeaker,
               dropdownColor:
                   isDarkMode ? const Color(0xFF2C2C2C) : Colors.white,
               style: TextStyle(color: textColor),
-              decoration:
-                  _inputDecoration("Speaker", Icons.person_outline, isDarkMode),
-              items: AppConstants.availablePastors.map((String pastor) {
-                return DropdownMenuItem(value: pastor, child: Text(pastor));
-              }).toList(),
-              onChanged: _isSaving
+              decoration: _inputDecoration(
+                'Speaker',
+                Icons.person_outline,
+                isDarkMode,
+              ),
+              items: _speakerOptions
+                  .map(
+                    (pastor) => DropdownMenuItem<String>(
+                      value: pastor,
+                      child: Text(
+                        pastor,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (_isSaving || _isLoadingPastors)
                   ? null
-                  : (val) => setState(() => _selectedSpeaker = val!),
+                  : (value) => setState(() => _selectedSpeaker = value!),
             ),
+            if (_isLoadingPastors)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: LinearProgressIndicator(minHeight: 2),
+              ),
             const SizedBox(height: 15),
-            _buildField(_descController, "Description", Icons.notes, isDarkMode,
-                maxLines: 2),
+            _buildField(
+              _descController,
+              'Description',
+              Icons.notes,
+              isDarkMode,
+              maxLines: 2,
+            ),
             _buildAudioPicker(isDarkMode),
             if (_isSaving &&
                 (_newAudioFile != null || _webAudioBytes != null)) ...[
@@ -195,10 +242,11 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
               const SizedBox(height: 8),
               Center(
                 child: Text(
-                  "${(_uploadProgress * 100).toStringAsFixed(0)}% Uploaded",
+                  '${(_uploadProgress * 100).toStringAsFixed(0)}% Uploaded',
                   style: const TextStyle(
-                      color: AppColors.primaryPurple,
-                      fontWeight: FontWeight.bold),
+                    color: AppColors.primaryPurple,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -208,25 +256,34 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
               height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryPurple,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: Colors.grey,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15)),
-                    elevation: 0),
-                onPressed: (_isSaving || _isPicking) ? null : _handleSave,
+                  backgroundColor: AppColors.primaryPurple,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: (_isSaving || _isPicking || _isLoadingPastors)
+                    ? null
+                    : _handleSave,
                 child: _isSaving
                     ? const SizedBox(
                         width: 24,
                         height: 24,
                         child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2),
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
                       )
-                    : const Text("SAVE CHANGES",
+                    : const Text(
+                        'SAVE CHANGES',
                         style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.1)),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -236,33 +293,42 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
   }
 
   InputDecoration _inputDecoration(
-      String label, IconData icon, bool isDarkMode) {
+    String label,
+    IconData icon,
+    bool isDarkMode,
+  ) {
     return InputDecoration(
-        labelText: label,
-        labelStyle:
-            TextStyle(color: isDarkMode ? Colors.white60 : Colors.black54),
-        prefixIcon: Icon(icon, color: AppColors.primaryPurple),
-        filled: true,
-        fillColor:
-            isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide.none,
-        ));
+      labelText: label,
+      labelStyle: TextStyle(
+        color: isDarkMode ? Colors.white60 : Colors.black54,
+      ),
+      prefixIcon: Icon(icon, color: AppColors.primaryPurple),
+      filled: true,
+      fillColor:
+          isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(15),
+        borderSide: BorderSide.none,
+      ),
+    );
   }
 
-  Widget _buildField(TextEditingController controller, String label,
-      IconData icon, bool isDarkMode,
-      {int maxLines = 1}) {
+  Widget _buildField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+    bool isDarkMode, {
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15.0),
       child: TextField(
-          controller: controller,
-          maxLines: maxLines,
-          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-          decoration: _inputDecoration(label, icon, isDarkMode)),
+        controller: controller,
+        maxLines: maxLines,
+        style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+        decoration: _inputDecoration(label, icon, isDarkMode),
+      ),
     );
   }
 
@@ -273,28 +339,33 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         decoration: BoxDecoration(
-            color: isDarkMode
-                ? AppColors.primaryPurple.withValues(alpha: 0.1)
-                : const Color(0xFFF0EEFF),
-            borderRadius: BorderRadius.circular(15),
-            border:
-                Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.5))),
+          color: isDarkMode
+              ? AppColors.primaryPurple.withValues(alpha: 0.1)
+              : const Color(0xFFF0EEFF),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(
+            color: AppColors.primaryPurple.withValues(alpha: 0.5),
+          ),
+        ),
         child: Row(
           children: [
             _isPicking
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.audiotrack_outlined,
-                    color: AppColors.primaryPurple),
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(
+                    Icons.audiotrack_outlined,
+                    color: AppColors.primaryPurple,
+                  ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _selectedFileName ?? "Update Audio File",
+                    _selectedFileName ?? 'Update Audio File',
                     style: TextStyle(
                       color: _selectedFileName != null
                           ? AppColors.primaryPurple
@@ -306,21 +377,25 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (_selectedFileName == null)
-                    Text("Current file will be kept if none selected",
-                        style: TextStyle(
-                            fontSize: 11,
-                            color:
-                                isDarkMode ? Colors.white38 : Colors.black38)),
+                    Text(
+                      'Current file will be kept if none selected',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDarkMode ? Colors.white38 : Colors.black38,
+                      ),
+                    ),
                 ],
               ),
             ),
             if (_selectedFileName != null)
-              const Icon(Icons.check_circle,
-                  color: AppColors.primaryPurple, size: 20),
+              const Icon(
+                Icons.check_circle,
+                color: AppColors.primaryPurple,
+                size: 20,
+              ),
           ],
         ),
       ),
     );
   }
 }
-
