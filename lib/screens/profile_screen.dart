@@ -56,8 +56,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final authProvider = context.watch<AuthProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final recentHistory =
-        _resolveRecentHistory(widget.sermons, audio.recentPlayedIds);
+    final recentHistory = _resolveRecentHistory(
+      widget.sermons,
+      audio.recentPlayedIds,
+      audio.playedHistoryCache,
+    );
     final showGrowth = !widget.isAdminProfile;
 
     return Scaffold(
@@ -492,7 +495,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       padding: EdgeInsets.symmetric(vertical: 24),
       child: Opacity(
         opacity: 0.4,
-        child: Text('Rhemalize v1.2.0 â€¢ Built by Wisdom Magnus â€¢ 2026',
+        child: Text('Rhemalize v1.2.0 • Built by Wisdom Magnus • 2026',
             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500)),
       ),
     );
@@ -537,18 +540,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   List<Sermon> _resolveRecentHistory(
-      List<Sermon> sermons, List<String> recentIds) {
+    List<Sermon> sermons,
+    List<String> recentIds,
+    Map<String, Sermon> playedHistoryCache,
+  ) {
     final List<Sermon> history = [];
+    final seenIds = <String>{};
+
     for (final id in recentIds) {
+      Sermon? resolved;
       for (final sermon in sermons) {
         if (sermon.id == id) {
-          history.add(sermon);
+          resolved = sermon;
           break;
         }
         final ep = sermon.episodes.where((e) => e.id == id).toList();
         if (ep.isNotEmpty) {
           final episode = ep.first;
-          history.add(Sermon(
+          resolved = Sermon(
             id: episode.id,
             title: episode.title,
             speaker: episode.speaker,
@@ -562,9 +571,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             episodes: const [],
             seriesTitle: sermon.title,
             playCount: episode.playCount,
-          ));
+          );
           break;
         }
+      }
+
+      resolved ??= playedHistoryCache[id];
+      if (resolved != null && seenIds.add(resolved.id)) {
+        history.add(resolved);
       }
     }
     return history;

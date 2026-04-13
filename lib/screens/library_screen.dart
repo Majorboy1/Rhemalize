@@ -28,6 +28,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       allSermons,
       audioProvider.recentPlayedIds,
       audioProvider.playedSermonIds,
+      audioProvider.playedHistoryCache,
     );
 
     List<Sermon> filtered = playedSermons.where((s) {
@@ -157,31 +158,44 @@ class _LibraryScreenState extends State<LibraryScreen> {
     List<Sermon> allSermons,
     List<String> recentIds,
     Set<String> playedSermonIds,
+    Map<String, Sermon> playedHistoryCache,
   ) {
     final history = <Sermon>[];
     final seenIds = <String>{};
 
     for (final playedId in recentIds) {
-      for (final sermon in allSermons) {
-        final isDirectMatch = sermon.id == playedId;
-        final isEpisodeMatch = sermon.episodes.any((e) => e.id == playedId);
-        if (!isDirectMatch && !isEpisodeMatch) {
-          continue;
-        }
-        if (seenIds.add(sermon.id)) {
-          history.add(sermon);
-        }
-        break;
+      final sermon =
+          _resolvePlayedSermon(playedId, allSermons, playedHistoryCache);
+      if (sermon != null && seenIds.add(sermon.id)) {
+        history.add(sermon);
       }
     }
 
-    for (final sermon in allSermons) {
-      if (playedSermonIds.contains(sermon.id) && seenIds.add(sermon.id)) {
+    for (final sermonId in playedSermonIds) {
+      final sermon =
+          _resolvePlayedSermon(sermonId, allSermons, playedHistoryCache);
+      if (sermon != null && seenIds.add(sermon.id)) {
         history.add(sermon);
       }
     }
 
     return history;
+  }
+
+  Sermon? _resolvePlayedSermon(
+    String playedId,
+    List<Sermon> allSermons,
+    Map<String, Sermon> playedHistoryCache,
+  ) {
+    for (final sermon in allSermons) {
+      final isDirectMatch = sermon.id == playedId;
+      final isEpisodeMatch = sermon.episodes.any((e) => e.id == playedId);
+      if (isDirectMatch || isEpisodeMatch) {
+        return sermon;
+      }
+    }
+
+    return playedHistoryCache[playedId];
   }
 
   Widget _buildSortToggle() {
