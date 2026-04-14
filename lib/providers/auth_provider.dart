@@ -19,10 +19,7 @@ class AuthProvider with ChangeNotifier {
     clientId: kIsWeb
         ? '653124289726-mma5hdf4i1ml661d7449be13p8endvh2.apps.googleusercontent.com'
         : null,
-    scopes: <String>[
-      'email',
-      'https://www.googleapis.com/auth/contacts.readonly',
-    ],
+    scopes: <String>['email'],
   );
 
   User? _user;
