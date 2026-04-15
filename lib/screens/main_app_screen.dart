@@ -90,6 +90,7 @@ class _MainAppState extends State<MainApp> {
     // are handled by the sub-screens (HomeScreen, etc.), not the MainApp shell.
     final authProvider = context.read<AuthProvider>();
     final sermonProvider = context.read<SermonProvider>();
+    final audioProvider = context.read<AudioProvider>();
 
     // Determine which screen to show based on the active tab
     Widget currentScreen;
@@ -113,7 +114,7 @@ class _MainAppState extends State<MainApp> {
           currentStreak: 0,
           totalSermons: sermonProvider.sermons.length,
           sermons: sermonProvider.sermons,
-          onLogout: () => authProvider.signOut(),
+          onLogout: () => authProvider.signOut(audioProvider: audioProvider),
         );
         break;
     }

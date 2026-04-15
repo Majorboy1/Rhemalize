@@ -38,6 +38,7 @@ class AudioProvider with ChangeNotifier {
   static const String _lastListenKey = 'last_listen_date';
   static const String _positionPrefix = 'resume_pos_';
   static const String _lastResumeKey = 'last_resume_id';
+  static const String _cloudHistoryField = 'playbackHistory';
   static const String _fallbackArt =
       "https://rhemalize-church-audio-app.web.app/assets/icon.png";
 
@@ -757,6 +758,7 @@ class AudioProvider with ChangeNotifier {
   }
 
   Future<void> _loadPlayedHistory() async {
+    _resetHistoryState();
     final prefs = await SharedPreferences.getInstance();
     final List<String>? savedIds = prefs.getStringList(_scopedKey(_playedKey));
     final List<String>? savedOrder =
@@ -796,6 +798,11 @@ class AudioProvider with ChangeNotifier {
         debugPrint('Failed to load played sermon snapshots: ');
       }
     }
+
+    if (_historyScope != 'signed_out' && !_currentUserIsAdmin) {
+      await _loadHistoryFromCloud();
+    }
+
     notifyListeners();
   }
 
@@ -811,6 +818,97 @@ class AudioProvider with ChangeNotifier {
         ),
       ),
     );
+
+    if (_historyScope != 'signed_out' && !_currentUserIsAdmin) {
+      await _syncHistoryToCloud();
+    }
+  }
+
+  Map<String, dynamic> _historyStateToJson() {
+    return {
+      'playedIds': _playedIds.toList(),
+      'playedOrder': _playedOrder,
+      'playedSnapshots': _playedHistoryCache.map(
+        (key, value) => MapEntry(key, value.toJson()),
+      ),
+      'lastListenDate': _lastListenDate.toIso8601String(),
+      'lastResumableId': _lastResumableId,
+      'resumePositions': _resumePositions.map(
+        (key, value) => MapEntry(key, value),
+      ),
+    };
+  }
+
+  void _applyHistoryState(Map<String, dynamic> data) {
+    _playedIds
+      ..clear()
+      ..addAll((data['playedIds'] as List? ?? const [])
+          .map((item) => item.toString()));
+    _playedOrder
+      ..clear()
+      ..addAll((data['playedOrder'] as List? ?? const [])
+          .map((item) => item.toString()));
+    _playedHistoryCache.clear();
+    final snapshots = data['playedSnapshots'];
+    if (snapshots is Map) {
+      snapshots.forEach((key, value) {
+        if (key != null && value is Map<String, dynamic>) {
+          _playedHistoryCache[key.toString()] = Sermon.fromJson(value);
+        } else if (key != null && value is Map) {
+          _playedHistoryCache[key.toString()] =
+              Sermon.fromJson(Map<String, dynamic>.from(value));
+        }
+      });
+    }
+    _resumePositions
+      ..clear()
+      ..addAll(
+        (data['resumePositions'] is Map)
+            ? (data['resumePositions'] as Map).map(
+                (key, value) => MapEntry(
+                  key.toString(),
+                  int.tryParse(value.toString()) ?? 0,
+                ),
+              )
+            : const <String, int>{},
+      );
+
+    final lastListen = data['lastListenDate']?.toString();
+    _lastListenDate =
+        lastListen == null ? DateTime.now() : DateTime.tryParse(lastListen) ?? DateTime.now();
+    final lastResumable = data['lastResumableId']?.toString();
+    _lastResumableId =
+        (lastResumable == null || lastResumable.isEmpty) ? null : lastResumable;
+  }
+
+  Future<void> _loadHistoryFromCloud() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      final snapshot = await _firestore.collection('users').doc(user.uid).get();
+      final data = snapshot.data();
+      final cloudHistory = data?[_cloudHistoryField];
+      if (cloudHistory is! Map) return;
+
+      _applyHistoryState(Map<String, dynamic>.from(cloudHistory));
+      await _savePlayedHistory();
+    } catch (e) {
+      debugPrint('Failed to load playback history from cloud: $e');
+    }
+  }
+
+  Future<void> _syncHistoryToCloud() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null || _currentUserIsAdmin) return;
+
+      await _firestore.collection('users').doc(user.uid).set({
+        _cloudHistoryField: _historyStateToJson(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Failed to sync playback history to cloud: $e');
+    }
   }
 
   Future<void> clearPlayedHistory() async {
@@ -832,6 +930,7 @@ class AudioProvider with ChangeNotifier {
     for (final id in idsToClear) {
       await prefs.remove(_positionKey(id));
     }
+    await _syncHistoryToCloud();
     notifyListeners();
   }
 

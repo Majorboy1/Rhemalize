@@ -94,7 +94,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
   Future<void> _handleLogout() async {
     final audioProvider = context.read<AudioProvider>();
     final authProvider = context.read<AuthProvider>();
-    final navigator = Navigator.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -119,9 +118,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     if (confirm == true) {
       audioProvider.stop();
       await authProvider.signOut();
-      if (mounted) {
-        navigator.pushNamedAndRemoveUntil('/login', (route) => false);
-      }
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     }
   }
 

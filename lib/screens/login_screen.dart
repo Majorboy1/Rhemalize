@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
-import 'admin/admin_main_screen.dart';
-import 'main_app_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -91,15 +89,9 @@ class _LoginScreenState extends State<LoginScreen>
           .get();
       if (!mounted) return;
 
-      if (adminDoc.exists) {
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const AdminMainScreen()));
-      } else if (_showAdminForm) {
+      if (!adminDoc.exists && _showAdminForm) {
         await auth.signOut();
         throw 'Access Denied: Admin rights required.';
-      } else {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const MainApp()));
       }
     } catch (e) {
       if (mounted) {

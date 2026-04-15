@@ -60,23 +60,36 @@ class AuthProvider with ChangeNotifier {
       final userDoc = _firestore.collection('users').doc(user.uid);
       final docSnapshot = await userDoc.get();
       final photoUrl = user.photoURL;
+      final email = user.email?.trim().toLowerCase();
+      var resolvedRole = 'user';
+
+      if (email != null && email.isNotEmpty) {
+        final adminDoc = await _firestore.collection('admins').doc(email).get();
+        if (adminDoc.exists) {
+          resolvedRole = 'admin';
+        }
+      }
 
       if (!docSnapshot.exists) {
-        _userRole = 'user';
+        _userRole = resolvedRole;
         await userDoc.set({
           'email': user.email,
           'name': user.displayName,
           'photoUrl': photoUrl,
-          'role': 'user',
+          'role': resolvedRole,
           'lastActive': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       } else {
         final data = docSnapshot.data();
-        _userRole = data?['role'] ?? 'user';
+        final storedRole = (data?['role'] ?? '').toString().toLowerCase();
+        _userRole = resolvedRole == 'admin'
+            ? 'admin'
+            : (storedRole.isEmpty ? 'user' : storedRole);
         await userDoc.update({
           'email': user.email,
           'name': user.displayName,
           'photoUrl': photoUrl,
+          'role': _userRole,
           'lastActive': FieldValue.serverTimestamp(),
         });
       }
