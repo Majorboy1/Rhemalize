@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../models/sermon.dart';
 import '../../providers/sermon_provider.dart';
 import '../../utils/app_colors.dart';
+import '../../utils/app_logger.dart';
 import '../../utils/pastor_directory.dart';
 
 class EditEpisodeModal extends StatefulWidget {
@@ -91,7 +92,7 @@ class _EditEpisodeModalState extends State<EditEpisodeModal> {
         });
       }
     } catch (e) {
-      debugPrint('Picker Error: $e');
+      AppLogger.debug('Picker Error', e);
     } finally {
       if (mounted) {
         setState(() => _isPicking = false);

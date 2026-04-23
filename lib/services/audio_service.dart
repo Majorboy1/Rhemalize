@@ -1,6 +1,6 @@
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
-import 'package:flutter/foundation.dart';
+import '../utils/app_logger.dart';
 
 class AudioService {
   // Singleton pattern
@@ -18,7 +18,7 @@ class AudioService {
       final session = await AudioSession.instance;
       await session.configure(const AudioSessionConfiguration.music());
     } catch (e) {
-      debugPrint("AudioSession Error: $e");
+      AppLogger.debug("AudioSession Error", e);
     }
   }
 
@@ -27,7 +27,7 @@ class AudioService {
     try {
       await _player.play();
     } catch (e) {
-      debugPrint("Error playing: $e");
+      AppLogger.debug("Error playing", e);
     }
   }
 

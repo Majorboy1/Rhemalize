@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/sermon.dart';
+import '../utils/app_logger.dart';
 
 class FavoritesProvider with ChangeNotifier {
   final Set<String> _favoriteIds = {};
@@ -28,11 +29,8 @@ class FavoritesProvider with ChangeNotifier {
   }
 
   void _listenToFavorites(String userId) {
-    _favoritesSubscription = _firestore
-        .collection('users')
-        .doc(userId)
-        .snapshots()
-        .listen((doc) {
+    _favoritesSubscription =
+        _firestore.collection('users').doc(userId).snapshots().listen((doc) {
       final data = doc.data();
       final List<dynamic> remoteFavorites = data?['favorites'] ?? [];
       _favoriteIds
@@ -40,7 +38,7 @@ class FavoritesProvider with ChangeNotifier {
         ..addAll(remoteFavorites.map((e) => e.toString()));
       notifyListeners();
     }, onError: (e) {
-      debugPrint('Favorite Sync Error: $e');
+      AppLogger.debug('Favorite Sync Error', e);
     });
   }
 
@@ -84,7 +82,7 @@ class FavoritesProvider with ChangeNotifier {
         _favoriteIds.remove(id);
       }
       notifyListeners();
-      debugPrint('Favorite Sync Error: $e');
+      AppLogger.debug('Favorite Sync Error', e);
     }
 
     return !wasFavorite;

@@ -9,6 +9,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/audio_provider.dart';
+import '../utils/app_logger.dart';
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -40,7 +41,7 @@ class AuthProvider with ChangeNotifier {
           try {
             await FirebaseMessaging.instance.subscribeToTopic('new_sermons');
           } catch (e) {
-            debugPrint("FCM not supported on this platform: $e");
+            AppLogger.debug("FCM not supported on this platform", e);
           }
         }
       } else {
@@ -95,7 +96,7 @@ class AuthProvider with ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      debugPrint("Error updating user stats: $e");
+      AppLogger.debug("Error updating user stats", e);
     }
   }
 
@@ -141,7 +142,7 @@ class AuthProvider with ChangeNotifier {
 
       return userCredential;
     } catch (e) {
-      debugPrint("Google Sign-In Error: $e");
+      AppLogger.debug("Google Sign-In Error", e);
       rethrow;
     } finally {
       _setLoading(false);
@@ -175,7 +176,7 @@ class AuthProvider with ChangeNotifier {
       _userRole = null;
       notifyListeners();
     } catch (e) {
-      debugPrint("Sign-Out Error: $e");
+      AppLogger.debug("Sign-Out Error", e);
     }
   }
 
@@ -249,7 +250,7 @@ class AuthProvider with ChangeNotifier {
         'uploaderId': _user?.uid,
       });
     } catch (e) {
-      debugPrint("Upload Error: $e");
+      AppLogger.debug("Upload Error", e);
       rethrow;
     }
   }
@@ -308,7 +309,7 @@ class AuthProvider with ChangeNotifier {
         'uploaderId': _user?.uid,
       });
     } catch (e) {
-      debugPrint("Series Upload Error: $e");
+      AppLogger.debug("Series Upload Error", e);
       rethrow;
     }
   }
@@ -341,6 +342,3 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-
-

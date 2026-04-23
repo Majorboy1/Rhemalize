@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/sermon.dart';
 import '../providers/audio_provider.dart';
 import '../services/storage_service.dart';
+import '../utils/app_logger.dart';
 
 class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
   List<Sermon> _sermons = [];
@@ -54,7 +55,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
       StorageService().saveSermons(_sermons);
       notifyListeners();
     }, onError: (error) {
-      debugPrint("Firestore Listener Error: $error");
+      AppLogger.debug("Firestore Listener Error", error);
       _isLoading = false;
       notifyListeners();
     });
@@ -135,7 +136,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
 
       return Sermon.fromFirestore(newSermonData, docRef.id);
     } catch (e) {
-      debugPrint("Upload Sermon Error: $e");
+      AppLogger.debug("Upload Sermon Error", e);
       rethrow;
     }
   }
@@ -178,7 +179,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
           .doc(id)
           .update(updates);
     } catch (e) {
-      debugPrint("Update Error: $e");
+      AppLogger.debug("Update Error", e);
       rethrow;
     }
   }
@@ -223,7 +224,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         await docRef.update({'episodes': episodes});
       }
     } catch (e) {
-      debugPrint("Update Episode Error: $e");
+      AppLogger.debug("Update Episode Error", e);
       rethrow;
     }
   }
@@ -267,7 +268,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         }
       }
     } catch (e) {
-      debugPrint("Delete Episode Error: $e");
+      AppLogger.debug("Delete Episode Error", e);
       _listenToSermons(); // Restore state on failure
       rethrow;
     }
@@ -310,7 +311,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         'episodes': FieldValue.arrayUnion([newEpisode])
       });
     } catch (e) {
-      debugPrint("Add Episode Error: $e");
+      AppLogger.debug("Add Episode Error", e);
       rethrow;
     }
   }
@@ -342,7 +343,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         await docRef.delete();
       }
     } catch (e) {
-      debugPrint("Delete Sermon Error: $e");
+      AppLogger.debug("Delete Sermon Error", e);
       _listenToSermons();
       rethrow;
     }
@@ -354,7 +355,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         await FirebaseStorage.instance.refFromURL(url).delete();
       }
     } catch (e) {
-      debugPrint("Storage Cleanup Error: $e");
+      AppLogger.debug("Storage Cleanup Error", e);
     }
   }
 

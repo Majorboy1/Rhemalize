@@ -20,13 +20,14 @@ import 'providers/audio_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/connectivity_service.dart';
+import 'utils/app_logger.dart';
 
 // --- PUSH NOTIFICATION SERVICE ---
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  debugPrint("Handling a background message: ${message.messageId}");
+  AppLogger.debug("Handling a background message: ${message.messageId}");
 }
 
 class PushNotificationService {
@@ -100,7 +101,7 @@ class PushNotificationService {
           ),
         );
       }
-      debugPrint('Foreground Message received: ${notification?.title}');
+      AppLogger.debug('Foreground Message received: ${notification?.title}');
     });
   }
 }
@@ -129,9 +130,9 @@ void main() async {
       androidNotificationOngoing: true,
       androidShowNotificationBadge: true,
     );
-    debugPrint("Audio service initialized successfully");
+    AppLogger.debug("Audio service initialized successfully");
   } catch (e) {
-    debugPrint("Audio service initialization failed: $e");
+    AppLogger.debug("Audio service initialization failed", e);
   }
 
   // 4. Push Notifications
@@ -228,7 +229,7 @@ class _AuthRootState extends State<AuthRoot> {
   }
 
   void _handleDeepLink(Uri uri) {
-    debugPrint('Deep Link received: $uri');
+    AppLogger.debug('Deep Link received: $uri');
   }
 
   @override

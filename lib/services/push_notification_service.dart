@@ -1,15 +1,15 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../firebase_options.dart';
+import '../utils/app_logger.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  debugPrint("Handling a background message: ${message.messageId}");
+  AppLogger.debug("Handling a background message: ${message.messageId}");
 }
 
 class PushNotificationService {
@@ -87,12 +87,12 @@ class PushNotificationService {
           ),
         );
       }
-      debugPrint('Foreground Message: ${message.notification?.title}');
+      AppLogger.debug('Foreground Message: ${message.notification?.title}');
     });
 
     // 6. Handle notification tap when app is in background/terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint('A new onMessageOpenedApp event was published!');
+      AppLogger.debug('A new onMessageOpenedApp event was published!');
       // You can add navigation logic here if needed
     });
   }

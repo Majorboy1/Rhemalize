@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:audio_session/audio_session.dart';
 import '../models/sermon.dart';
 import '../services/audio_service.dart';
+import '../utils/app_logger.dart';
 
 enum PlaybackContext { home, library }
 
@@ -93,6 +94,7 @@ class AudioProvider with ChangeNotifier {
     final nextScope = user?.uid ?? 'signed_out';
 
     if (nextScope != _historyScope) {
+      _flushCurrentResumeProgress();
       await _savePlayedHistory();
       stop();
       _resetHistoryState();
@@ -129,7 +131,7 @@ class AudioProvider with ChangeNotifier {
       final role = (userDoc.data()?['role'] ?? '').toString().toLowerCase();
       return role == 'admin';
     } catch (e) {
-      debugPrint('Failed to resolve account role: $e');
+      AppLogger.debug('Failed to resolve account role', e);
       return false;
     }
   }
@@ -194,6 +196,9 @@ class AudioProvider with ChangeNotifier {
         _startPositionTracking();
       } else {
         _stopPositionTracking();
+        if (state.processingState != ProcessingState.completed) {
+          _flushCurrentResumeProgress();
+        }
       }
 
       if (state.processingState == ProcessingState.completed) {
@@ -274,8 +279,8 @@ class AudioProvider with ChangeNotifier {
         Timer.periodic(const Duration(seconds: 5), (timer) async {
       final id = _currentEpisode?.id ?? _currentSermon?.id;
       if (id != null && _isPlaying && _position.inSeconds > 0) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt(_positionKey(id), _position.inMilliseconds);
+        _resumePositions[id] = _position.inMilliseconds;
+        await _persistResumeProgress(id, _position.inMilliseconds);
       }
     });
   }
@@ -286,7 +291,35 @@ class AudioProvider with ChangeNotifier {
 
   Future<void> _clearSavedPosition(String id) async {
     final prefs = await SharedPreferences.getInstance();
+    _resumePositions.remove(id);
+    if (_lastResumableId == id) {
+      _lastResumableId = null;
+      await prefs.remove(_scopedKey(_lastResumeKey));
+    }
     await prefs.remove(_positionKey(id));
+    await _savePlayedHistory();
+  }
+
+  void _flushCurrentResumeProgress() {
+    final trackId = _currentEpisode?.id ?? _currentSermon?.id;
+    final positionMs = _position.inMilliseconds;
+
+    if (trackId == null || positionMs <= 0) return;
+
+    _resumePositions[trackId] = positionMs;
+    _lastResumableId = trackId;
+    unawaited(_persistResumeProgress(trackId, positionMs));
+  }
+
+  Future<void> _persistResumeProgress(String trackId, int positionMs) async {
+    if (positionMs <= 0) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    _resumePositions[trackId] = positionMs;
+    _lastResumableId = trackId;
+    await prefs.setInt(_positionKey(trackId), positionMs);
+    await prefs.setString(_scopedKey(_lastResumeKey), trackId);
+    await _savePlayedHistory();
   }
 // ================= STREAK & FIRESTORE LOGIC =================
 
@@ -441,7 +474,7 @@ class AudioProvider with ChangeNotifier {
         }
       });
     } catch (e) {
-      debugPrint("Streak Transaction Error: $e");
+      AppLogger.debug("Streak Transaction Error", e);
     }
   }
 
@@ -488,7 +521,7 @@ class AudioProvider with ChangeNotifier {
         }
       }
     }).catchError((e) {
-      debugPrint("PlayCount Transaction Error: $e");
+      AppLogger.debug("PlayCount Transaction Error", e);
     });
   }
 
@@ -628,12 +661,15 @@ class AudioProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      _flushCurrentResumeProgress();
       await _audioService.player.stop();
 
       // 1. Check for saved position
       final id = _currentEpisode?.id ?? _currentSermon?.id;
       final prefs = await SharedPreferences.getInstance();
-      final savedMs = id == null ? 0 : prefs.getInt(_positionKey(id)) ?? 0;
+      final savedMs = id == null
+          ? 0
+          : (_resumePositions[id] ?? prefs.getInt(_positionKey(id)) ?? 0);
       final initialPosition = Duration(milliseconds: savedMs);
 
       final safeIndex = (initialIndex >= 0 && initialIndex < playlist.length)
@@ -660,7 +696,7 @@ class AudioProvider with ChangeNotifier {
       }
     } catch (e) {
       _lastError = e.toString();
-      debugPrint("Audio Play Error: $e");
+      AppLogger.debug("Audio Play Error", e);
     } finally {
       _isBuffering = false;
       notifyListeners();
@@ -688,6 +724,7 @@ class AudioProvider with ChangeNotifier {
   void playPrevious() => _audioService.player.seekToPrevious();
 
   void stop() {
+    _flushCurrentResumeProgress();
     _stopPositionTracking();
     _audioService.stop();
     _currentSermon = null;
@@ -795,7 +832,7 @@ class AudioProvider with ChangeNotifier {
           }
         });
       } catch (e) {
-        debugPrint('Failed to load played sermon snapshots: ');
+        AppLogger.debug('Failed to load played sermon snapshots');
       }
     }
 
@@ -874,8 +911,9 @@ class AudioProvider with ChangeNotifier {
       );
 
     final lastListen = data['lastListenDate']?.toString();
-    _lastListenDate =
-        lastListen == null ? DateTime.now() : DateTime.tryParse(lastListen) ?? DateTime.now();
+    _lastListenDate = lastListen == null
+        ? DateTime.now()
+        : DateTime.tryParse(lastListen) ?? DateTime.now();
     final lastResumable = data['lastResumableId']?.toString();
     _lastResumableId =
         (lastResumable == null || lastResumable.isEmpty) ? null : lastResumable;
@@ -892,9 +930,18 @@ class AudioProvider with ChangeNotifier {
       if (cloudHistory is! Map) return;
 
       _applyHistoryState(Map<String, dynamic>.from(cloudHistory));
+      final prefs = await SharedPreferences.getInstance();
+      for (final entry in _resumePositions.entries) {
+        if (entry.value > 0) {
+          await prefs.setInt(_positionKey(entry.key), entry.value);
+        }
+      }
+      if (_lastResumableId != null && _lastResumableId!.isNotEmpty) {
+        await prefs.setString(_scopedKey(_lastResumeKey), _lastResumableId!);
+      }
       await _savePlayedHistory();
     } catch (e) {
-      debugPrint('Failed to load playback history from cloud: $e');
+      AppLogger.debug('Failed to load playback history from cloud', e);
     }
   }
 
@@ -907,7 +954,7 @@ class AudioProvider with ChangeNotifier {
         _cloudHistoryField: _historyStateToJson(),
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint('Failed to sync playback history to cloud: $e');
+      AppLogger.debug('Failed to sync playback history to cloud', e);
     }
   }
 
