@@ -1,11 +1,11 @@
 {
-    "name": "rhemalize_church_audio_app_v2",
-    "short_name": "rhemalize_church_audio_app_v2",
+    "name": "Rhemalize",
+    "short_name": "Rhemalize",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FFFFFF",
+    "theme_color": "#0B4EA2",
+    "description": "Rhemalize church audio app for sermon streaming and ministry resources.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

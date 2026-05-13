@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Request deletion of your Rhemalize account and associated app data.">
+    <title>Rhemalize Account Deletion</title>
+    <link rel="icon" href="assets/rhema-logo.png">
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #122033;
+        --muted: #536174;
+        --line: #dce3ed;
+        --brand: #0b4ea2;
+        --brand-deep: #082d66;
+        --bg: #f6f8fb;
+        --paper: #ffffff;
+        --soft: #eef5ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.65;
+      }
+
+      a {
+        color: var(--brand);
+      }
+
+      header {
+        background: linear-gradient(135deg, var(--brand-deep), var(--brand));
+        color: white;
+      }
+
+      .wrap {
+        width: min(960px, calc(100% - 32px));
+        margin: 0 auto;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 24px;
+        align-items: center;
+        padding: 48px 0;
+      }
+
+      .logo {
+        width: 96px;
+        height: 96px;
+        border-radius: 24px;
+        background: white;
+        object-fit: contain;
+        padding: 8px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22);
+      }
+
+      .eyebrow {
+        margin: 0 0 4px;
+        font-size: 0.86rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        opacity: 0.82;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 3.8rem);
+        line-height: 1.05;
+        letter-spacing: 0;
+      }
+
+      .updated {
+        margin: 14px 0 0;
+        max-width: 720px;
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 1.02rem;
+      }
+
+      main {
+        padding: 42px 0 64px;
+      }
+
+      article {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--paper);
+        padding: clamp(24px, 4vw, 44px);
+      }
+
+      section + section {
+        margin-top: 34px;
+        padding-top: 28px;
+        border-top: 1px solid var(--line);
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        color: var(--brand-deep);
+        font-size: 1.45rem;
+        line-height: 1.25;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0 0 14px;
+      }
+
+      ol,
+      ul {
+        margin: 0 0 14px;
+        padding-left: 22px;
+      }
+
+      li + li {
+        margin-top: 8px;
+      }
+
+      .notice {
+        border-left: 4px solid var(--brand);
+        background: var(--soft);
+        padding: 16px 18px;
+        color: #18395f;
+      }
+
+      .button {
+        display: inline-block;
+        margin-top: 6px;
+        border-radius: 8px;
+        background: var(--brand);
+        color: white;
+        padding: 12px 16px;
+        text-decoration: none;
+        font-weight: 700;
+      }
+
+      footer {
+        border-top: 1px solid var(--line);
+        background: #eef2f7;
+        color: var(--muted);
+        padding: 22px 16px;
+        text-align: center;
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 760px) {
+        .hero {
+          grid-template-columns: 1fr;
+          gap: 18px;
+          padding: 36px 0;
+        }
+
+        .logo {
+          width: 82px;
+          height: 82px;
+        }
+
+        main {
+          padding-top: 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap hero">
+        <img class="logo" src="assets/rhema-logo.png" alt="Rhemalize logo">
+        <div>
+          <p class="eyebrow">Rhemalize</p>
+          <h1>Account Deletion</h1>
+          <p class="updated">Use this page to request deletion of your Rhemalize account and associated app data.</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <article>
+        <section>
+          <h2>How To Request Account Deletion</h2>
+          <p>To request deletion of your Rhemalize account and associated data, send a request to the developer contact email listed on the Rhemalize Google Play Store listing.</p>
+          <ol>
+            <li>Use the same email address that is connected to your Rhemalize account.</li>
+            <li>Use the subject line: Rhemalize Account Deletion Request.</li>
+            <li>Include your Rhemalize account email address and state that you want your account deleted.</li>
+            <li>If you only want certain data deleted, describe the data you want removed, such as listening history or favorites.</li>
+          </ol>
+          <p class="notice">We may ask you to verify account ownership before deleting account data. This helps protect accounts from unauthorized deletion requests.</p>
+        </section>
+
+        <section>
+          <h2>Data Deleted</h2>
+          <p>When an account deletion request is verified and completed, Rhemalize will delete or anonymize personal data associated with the account where technically and legally possible, including:</p>
+          <ul>
+            <li>Firebase Authentication account information for Rhemalize.</li>
+            <li>User profile information stored by Rhemalize, such as name, email address, profile photo URL, and role.</li>
+            <li>Favorites, playback history, listening progress, and listen records associated with the account.</li>
+            <li>Notification tokens associated with the account, where present.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Data That May Be Kept</h2>
+          <p>Some information may be retained when necessary for security, legal compliance, fraud prevention, dispute resolution, app integrity, backup recovery, or operation of ministry content that is not personal to your account.</p>
+          <p>Examples of data that may be kept include:</p>
+          <ul>
+            <li>Non-personal aggregated analytics or ministry usage summaries.</li>
+            <li>Server, security, and audit records required to protect the app.</li>
+            <li>Public or administrator-managed sermon, series, pastor, and media content that is not personal account data.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Deletion Timeframe</h2>
+          <p>Verified deletion requests are normally completed within 30 days. Some backup or security records may remain for up to 90 days before being removed through routine retention processes, unless a longer period is required by law or necessary for security and dispute handling.</p>
+        </section>
+
+        <section>
+          <h2>Partial Data Deletion</h2>
+          <p>You may request deletion of some data without deleting your full account. For example, you may request deletion of listening history, favorites, or other app activity associated with your account.</p>
+          <p>Send the request to the developer contact email listed on the Rhemalize Google Play Store listing and describe the data you want deleted.</p>
+        </section>
+
+        <section>
+          <h2>App Details</h2>
+          <p>App name: Rhemalize<br>Package name: com.rhemalize.app<br>Developer/store listing name: Rhemalize</p>
+          <p><a href="privacy-policy.html">View the Rhemalize Privacy Policy</a></p>
+        </section>
+      </article>
+    </main>
+
+    <footer>
+      Rhemalize Account Deletion
+    </footer>
+  </body>
+</html>
