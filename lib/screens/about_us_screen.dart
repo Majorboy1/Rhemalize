@@ -13,7 +13,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
   // 1. List of images to cycle through
   final List<String> _images = [
     'assets/images/pst&wife.jpg',
-    'assets/images/ma_judith.png',
+    'assets/images/ma_judith.jpg',
     'assets/images/bro_dave.jpg',
     'assets/images/sis_peace.jpg',
     'assets/images/bro_wisdom.jpg',

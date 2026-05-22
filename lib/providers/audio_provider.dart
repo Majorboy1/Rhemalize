@@ -41,7 +41,7 @@ class AudioProvider with ChangeNotifier {
   static const String _lastResumeKey = 'last_resume_id';
   static const String _cloudHistoryField = 'playbackHistory';
   static const String _fallbackArt =
-      "https://rhemalize-church-audio-app.web.app/assets/icon.png";
+      "https://rhemalize-church-audio-app.web.app/assets/rhema-logo.png";
 
   PlaybackDataDelegate? dataDelegate;
   PlaybackSession? _session;

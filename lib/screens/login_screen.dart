@@ -28,10 +28,11 @@ class _LoginScreenState extends State<LoginScreen>
   final List<String> _backgroundImages = [
     'assets/images/picture-4.png',
     'assets/images/pst&wife.jpg',
-    'assets/images/ma_judith.png',
+    'assets/images/ma_judith.jpg',
     'assets/images/bro_dave.jpg',
     'assets/images/sis_peace.jpg',
     'assets/images/bro_wisdom.jpg',
+    'assets/images/fefe.jpg',
     'assets/images/esther.jpg',
   ];
 

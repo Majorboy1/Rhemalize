@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appID": "1:653124289726:android:9192575c77ef8eaec70aef",
+        "components": [
+          { "/": "/sermon*", "comment": "Matches any sermon link" }
+        ]
+      }
+    ]
+  }
+}
