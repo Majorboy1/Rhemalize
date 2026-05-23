@@ -193,7 +193,13 @@ class _LoginScreenState extends State<LoginScreen>
                   if (_isLoading)
                     const CircularProgressIndicator(color: Colors.black)
                   else if (!_showAdminForm)
-                    _buildGoogleButton()
+                    Column(
+                      children: [
+                        _buildGoogleButton(),
+                        const SizedBox(height: 14),
+                        _buildGuestButton(),
+                      ],
+                    )
                   else
                     _buildAdminForm(),
                   const SizedBox(height: 30),
@@ -263,6 +269,24 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGuestButton() {
+    return OutlinedButton(
+      onPressed: () {
+        context.read<AuthProvider>().continueAsGuest();
+      },
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.black,
+        minimumSize: const Size(double.infinity, 56),
+        side: const BorderSide(color: Colors.black, width: 1.2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+      ),
+      child: const Text(
+        "Continue as Guest",
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
       ),
     );
   }

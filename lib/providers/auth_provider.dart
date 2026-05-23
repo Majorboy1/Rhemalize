@@ -26,16 +26,19 @@ class AuthProvider with ChangeNotifier {
   User? _user;
   String? _userRole;
   bool _isLoading = false;
+  bool _isGuest = false;
 
   User? get user => _user;
   String? get userRole => _userRole;
   bool get isLoading => _isLoading;
+  bool get isGuest => _isGuest;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   AuthProvider() {
     _auth.authStateChanges().listen((user) async {
       _user = user;
       if (user != null) {
+        _isGuest = false;
         await _updateUserStats(user);
         if (!kIsWeb) {
           try {
@@ -49,6 +52,13 @@ class AuthProvider with ChangeNotifier {
       }
       notifyListeners();
     });
+  }
+
+  void continueAsGuest() {
+    _isGuest = true;
+    _user = null;
+    _userRole = 'user';
+    notifyListeners();
   }
 
   void _setLoading(bool value) {
@@ -103,6 +113,7 @@ class AuthProvider with ChangeNotifier {
   Future<UserCredential?> signInWithGoogle() async {
     try {
       _setLoading(true);
+      _isGuest = false;
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         _setLoading(false);
@@ -153,6 +164,7 @@ class AuthProvider with ChangeNotifier {
       String email, String password) async {
     try {
       _setLoading(true);
+      _isGuest = false;
       return await _auth.signInWithEmailAndPassword(
           email: email, password: password);
     } on FirebaseAuthException catch (e) {
@@ -174,6 +186,7 @@ class AuthProvider with ChangeNotifier {
       await _auth.signOut();
       _user = null;
       _userRole = null;
+      _isGuest = false;
       notifyListeners();
     } catch (e) {
       AppLogger.debug("Sign-Out Error", e);

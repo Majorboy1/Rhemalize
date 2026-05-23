@@ -236,6 +236,10 @@ class _AuthRootState extends State<AuthRoot> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
 
+    if (auth.isGuest) {
+      return const MainApp();
+    }
+
     return StreamBuilder<User?>(
       stream: auth.authStateChanges,
       builder: (context, snap) {
