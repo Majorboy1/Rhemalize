@@ -77,11 +77,20 @@ class _LoginScreenState extends State<LoginScreen>
       String? userEmail;
       if (method == 'google') {
         final credential = await auth.signInWithGoogle();
-        userEmail = credential?.user?.email?.toLowerCase();
+        if (credential == null) {
+          // User cancelled Google sign-in or it failed
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+        userEmail = credential.user?.email?.toLowerCase();
       } else {
         userEmail = _emailController.text.trim().toLowerCase();
         await auth.signInWithEmailAndPassword(
             userEmail, _passwordController.text.trim());
+      }
+
+      if (userEmail == null || userEmail.isEmpty) {
+        throw 'Unable to retrieve email. Please try again.';
       }
 
       final adminDoc = await FirebaseFirestore.instance

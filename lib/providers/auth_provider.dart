@@ -20,6 +20,9 @@ class AuthProvider with ChangeNotifier {
     clientId: kIsWeb
         ? '653124289726-mma5hdf4i1ml661d7449be13p8endvh2.apps.googleusercontent.com'
         : null,
+    serverClientId: kIsWeb
+        ? null
+        : '653124289726-mma5hdf4i1ml661d7449be13p8endvh2.apps.googleusercontent.com',
     scopes: <String>['email'],
   );
 
@@ -114,6 +117,20 @@ class AuthProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _isGuest = false;
+
+      if (kIsWeb) {
+        final provider = GoogleAuthProvider()
+          ..addScope('email')
+          ..setCustomParameters({'prompt': 'select_account'});
+        final userCredential = await _auth.signInWithPopup(provider);
+        final signedInUser = userCredential.user;
+        if (signedInUser != null) {
+          _user = signedInUser;
+          await _updateUserStats(signedInUser);
+        }
+        return userCredential;
+      }
+
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         _setLoading(false);

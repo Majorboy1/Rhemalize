@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "653124289726-fargf2shsnlnfloe992qtk46dukreqls.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rhemalize.app",
+            "certificate_hash": "9a411eb7d45823711310135f1d31d747113e0b4a"
+          }
+        },
+        {
           "client_id": "653124289726-vo2ihq5qal28b9ondequbrq8qldfms2c.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
