@@ -40,7 +40,8 @@ service cloud.firestore {
     }
 
     match /admins/{adminId} {
-      allow read: if signedIn() && adminEmail() == adminId;
+      allow get: if signedIn();
+      allow list: if false;
       allow write: if false;
     }
 

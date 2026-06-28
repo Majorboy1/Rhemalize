@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -11,20 +13,37 @@ import 'package:uuid/uuid.dart';
 import '../providers/audio_provider.dart';
 import '../utils/app_logger.dart';
 
+class GoogleSignInConfiguration {
+  const GoogleSignInConfiguration({
+    required this.clientId,
+    required this.serverClientId,
+    required this.scopes,
+  });
+
+  final String? clientId;
+  final String? serverClientId;
+  final List<String> scopes;
+}
+
 class AuthProvider with ChangeNotifier {
+  static const String _webClientId =
+      '653124289726-mma5hdf4i1ml661d7449be13p8endvh2.apps.googleusercontent.com';
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    clientId: kIsWeb
-        ? '653124289726-mma5hdf4i1ml661d7449be13p8endvh2.apps.googleusercontent.com'
-        : null,
-    serverClientId: kIsWeb
-        ? null
-        : '653124289726-mma5hdf4i1ml661d7449be13p8endvh2.apps.googleusercontent.com',
-    scopes: <String>['email'],
-  );
+  late final GoogleSignIn _googleSignIn;
+
+  static GoogleSignInConfiguration getGoogleSignInConfiguration({
+    required bool forWeb,
+  }) {
+    return GoogleSignInConfiguration(
+      clientId: null,
+      serverClientId: forWeb ? _webClientId : null,
+      scopes: <String>['email'],
+    );
+  }
 
   User? _user;
   String? _userRole;
@@ -38,11 +57,20 @@ class AuthProvider with ChangeNotifier {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   AuthProvider() {
+    final googleSignInConfig = getGoogleSignInConfiguration(forWeb: kIsWeb);
+    _googleSignIn = GoogleSignIn(
+      clientId: googleSignInConfig.clientId,
+      serverClientId: googleSignInConfig.serverClientId,
+      scopes: googleSignInConfig.scopes,
+    );
+
     _auth.authStateChanges().listen((user) async {
       _user = user;
       if (user != null) {
         _isGuest = false;
-        await _updateUserStats(user);
+        _userRole ??= 'user';
+        notifyListeners();
+        unawaited(_updateUserStats(user));
         if (!kIsWeb) {
           try {
             await FirebaseMessaging.instance.subscribeToTopic('new_sermons');
@@ -71,14 +99,25 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _updateUserStats(User user) async {
     try {
+      _userRole ??= 'user';
       final userDoc = _firestore.collection('users').doc(user.uid);
-      final docSnapshot = await userDoc.get();
+      final docSnapshot = await userDoc.get().timeout(
+            const Duration(seconds: 8),
+            onTimeout: () => throw TimeoutException('User profile timed out'),
+          );
       final photoUrl = user.photoURL;
       final email = user.email?.trim().toLowerCase();
       var resolvedRole = 'user';
 
       if (email != null && email.isNotEmpty) {
-        final adminDoc = await _firestore.collection('admins').doc(email).get();
+        final adminDoc = await _firestore
+            .collection('admins')
+            .doc(email)
+            .get()
+            .timeout(
+              const Duration(seconds: 8),
+              onTimeout: () => throw TimeoutException('Admin check timed out'),
+            );
         if (adminDoc.exists) {
           resolvedRole = 'admin';
         }
@@ -110,6 +149,8 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       AppLogger.debug("Error updating user stats", e);
+      _userRole ??= 'user';
+      notifyListeners();
     }
   }
 
@@ -131,6 +172,7 @@ class AuthProvider with ChangeNotifier {
         return userCredential;
       }
 
+      await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         _setLoading(false);
@@ -138,6 +180,9 @@ class AuthProvider with ChangeNotifier {
       }
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
+      if (googleAuth.idToken == null || googleAuth.accessToken == null) {
+        throw 'Google sign-in could not verify this app. Please try again.';
+      }
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
@@ -146,6 +191,10 @@ class AuthProvider with ChangeNotifier {
       final signedInUser = userCredential.user;
 
       if (signedInUser != null) {
+        _user = signedInUser;
+        _userRole ??= 'user';
+        notifyListeners();
+
         final googlePhotoUrl = googleUser.photoUrl;
         final googleDisplayName = googleUser.displayName;
 
@@ -164,11 +213,22 @@ class AuthProvider with ChangeNotifier {
         await signedInUser.reload();
         _user = _auth.currentUser;
         if (_user != null) {
-          await _updateUserStats(_user!);
+          unawaited(_updateUserStats(_user!));
         }
       }
 
       return userCredential;
+    } on FirebaseAuthException catch (e) {
+      AppLogger.debug("Google Firebase Auth Error", e);
+      throw e.message ?? "Google sign-in failed. Please try again.";
+    } on PlatformException catch (e) {
+      AppLogger.debug("Google Platform Sign-In Error", e);
+      final errorText = '${e.code} ${e.message} ${e.details}';
+      if (errorText.contains('ApiException: 10') ||
+          errorText.contains('DEVELOPER_ERROR')) {
+        throw 'Google sign-in is not configured for this Android build. Add the Android SHA-1/SHA-256 fingerprints to Firebase and ensure the Google services config is up to date.';
+      }
+      throw e.message ?? "Google sign-in failed. Please try again.";
     } catch (e) {
       AppLogger.debug("Google Sign-In Error", e);
       rethrow;
@@ -182,8 +242,14 @@ class AuthProvider with ChangeNotifier {
     try {
       _setLoading(true);
       _isGuest = false;
-      return await _auth.signInWithEmailAndPassword(
+      final userCredential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
+      final signedInUser = userCredential.user;
+      if (signedInUser != null) {
+        _user = signedInUser;
+        await _updateUserStats(signedInUser);
+      }
+      return userCredential;
     } on FirebaseAuthException catch (e) {
       throw e.message ?? "Authentication failed";
     } finally {

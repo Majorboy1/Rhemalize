@@ -14,6 +14,14 @@ if (keyPropertiesFile.exists()) {
     keyProperties.load(keyPropertiesFile.inputStream())
 }
 
+val releaseStoreFilePath = keyProperties.getProperty("storeFile")
+val hasReleaseSigning = keyPropertiesFile.exists() &&
+    !releaseStoreFilePath.isNullOrBlank() &&
+    !keyProperties.getProperty("storePassword").isNullOrBlank() &&
+    !keyProperties.getProperty("keyAlias").isNullOrBlank() &&
+    !keyProperties.getProperty("keyPassword").isNullOrBlank() &&
+    rootProject.file(releaseStoreFilePath).exists()
+
 android {
     namespace = "com.rhemalize.app"
     compileSdk = 36
@@ -43,27 +51,38 @@ android {
 
     signingConfigs {
         create("release") {
-            val storeFilePath = keyProperties["storeFile"] as String?
-            if (!storeFilePath.isNullOrBlank()) {
-                storeFile = rootProject.file(storeFilePath)
-                storePassword = keyProperties["storePassword"] as String?
-                keyAlias = keyProperties["keyAlias"] as String?
-                keyPassword = keyProperties["keyPassword"] as String?
+            if (hasReleaseSigning) {
+                storeFile = rootProject.file(releaseStoreFilePath)
+                storePassword = keyProperties.getProperty("storePassword")
+                keyAlias = keyProperties.getProperty("keyAlias")
+                keyPassword = keyProperties.getProperty("keyPassword")
             }
         }
     }
 
     buildTypes {
+        getByName("debug") {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+
         getByName("release") {
             // Keep the current runtime behavior stable while we prepare store builds.
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = if (keyPropertiesFile.exists()) {
+            signingConfig = if (hasReleaseSigning) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
             }
         }
+    }
+
+    lint {
+        // Disable lintVital for release builds on CI/Windows build environments where file locking occurs.
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 }
 

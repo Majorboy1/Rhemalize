@@ -136,7 +136,11 @@ void main() async {
   }
 
   // 4. Push Notifications
-  await PushNotificationService.initialize();
+  try {
+    await PushNotificationService.initialize();
+  } catch (e) {
+    AppLogger.debug("Push notification initialization failed", e);
+  }
 
   runApp(const RhemalizeApp());
 }
@@ -222,10 +226,17 @@ class _AuthRootState extends State<AuthRoot> {
     _appLinks = AppLinks();
     _appLinks.getInitialLink().then((uri) {
       if (uri != null) _handleDeepLink(uri);
+    }).catchError((e) {
+      AppLogger.debug('Initial deep link failed', e);
     });
-    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
-      _handleDeepLink(uri);
-    });
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (uri) {
+        _handleDeepLink(uri);
+      },
+      onError: (e) {
+        AppLogger.debug('Deep link stream failed', e);
+      },
+    );
   }
 
   void _handleDeepLink(Uri uri) {

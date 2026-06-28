@@ -93,15 +93,17 @@ class _LoginScreenState extends State<LoginScreen>
         throw 'Unable to retrieve email. Please try again.';
       }
 
-      final adminDoc = await FirebaseFirestore.instance
-          .collection('admins')
-          .doc(userEmail)
-          .get();
-      if (!mounted) return;
+      if (_showAdminForm) {
+        final adminDoc = await FirebaseFirestore.instance
+            .collection('admins')
+            .doc(userEmail)
+            .get();
+        if (!mounted) return;
 
-      if (!adminDoc.exists && _showAdminForm) {
-        await auth.signOut();
-        throw 'Access Denied: Admin rights required.';
+        if (!adminDoc.exists) {
+          await auth.signOut();
+          throw 'Access Denied: Admin rights required.';
+        }
       }
     } catch (e) {
       if (mounted) {
