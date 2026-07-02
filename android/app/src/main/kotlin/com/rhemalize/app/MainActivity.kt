@@ -11,10 +11,11 @@ class MainActivity : AudioServiceActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
+        super.onCreate(savedInstanceState)
+
         WindowInsetsControllerCompat(window, window.decorView).apply {
             isAppearanceLightStatusBars = true
             isAppearanceLightNavigationBars = true
         }
-        super.onCreate(savedInstanceState)
     }
 }

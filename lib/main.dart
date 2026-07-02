@@ -135,14 +135,17 @@ void main() async {
     AppLogger.debug("Audio service initialization failed", e);
   }
 
-  // 4. Push Notifications
+  runApp(const RhemalizeApp());
+
+  unawaited(_initializePushNotifications());
+}
+
+Future<void> _initializePushNotifications() async {
   try {
     await PushNotificationService.initialize();
   } catch (e) {
     AppLogger.debug("Push notification initialization failed", e);
   }
-
-  runApp(const RhemalizeApp());
 }
 
 class RhemalizeApp extends StatelessWidget {

@@ -14,19 +14,19 @@
       },
       "oauth_client": [
         {
+          "client_id": "653124289726-2e571vee2fpouh40pi064ldeus0blrh5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rhemalize.app",
+            "certificate_hash": "144ad9715f5eb72bdc7c5e39a714d65359e4ca6d"
+          }
+        },
+        {
           "client_id": "653124289726-fargf2shsnlnfloe992qtk46dukreqls.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.rhemalize.app",
             "certificate_hash": "9a411eb7d45823711310135f1d31d747113e0b4a"
-          }
-        },
-        {
-          "client_id": "653124289726-vo2ihq5qal28b9ondequbrq8qldfms2c.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.rhemalize.app",
-            "certificate_hash": "fa47503c915e8f03e441e929820f0442edca1a86"
           }
         },
         {
