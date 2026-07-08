@@ -29,113 +29,128 @@ class SeriesDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final List<Episode> episodes = series.episodes;
+    final double bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
-      body: Column(
-        children: [
-          // HEADER SECTION
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(16, 60, 16, 30),
-            decoration: const BoxDecoration(
-              color: AppColors.primaryPurple,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // HEADER SECTION
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 60, 16, 30),
+              decoration: const BoxDecoration(
+                color: AppColors.primaryPurple,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
+                ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GestureDetector(
-                  onTap: onBack,
-                  behavior: HitTestBehavior.opaque,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8.0),
-                    child: Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 20),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  series.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (series.description.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    series.description,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 14,
-                      height: 1.4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: onBack,
+                    behavior: HitTestBehavior.opaque,
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Icon(Icons.arrow_back_ios_new,
+                          color: Colors.white, size: 20),
                     ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    series.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (series.description.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      series.description,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 14,
+                        height: 1.4,
+                      ),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Text(
+                        series.speaker,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      SeniorPastorBadge(speaker: series.speaker),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${series.totalEpisodes} Episodes',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
+                    ),
                   ),
                 ],
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Text(
-                      series.speaker,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 16),
-                    ),
-                    const SizedBox(width: 8),
-                    SeniorPastorBadge(speaker: series.speaker),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${series.totalEpisodes} Episodes',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
 
-          // EPISODES LIST SECTION
-          Expanded(
-            child: isLoading
-                ? _buildSkeletonList(isDark)
-                : episodes.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
-                        itemCount: episodes.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final episode = episodes[index];
-                          final isPlayed = playedSermons.contains(episode.id);
+            // EPISODES LIST SECTION
+            Expanded(
+              child: isLoading
+                  ? _buildSkeletonList(isDark)
+                  : episodes.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.separated(
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            20,
+                            20,
+                            bottomInset + 120,
+                          ),
+                          itemCount: episodes.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final episode = episodes[index];
+                            final isPlayed = playedSermons.contains(episode.id);
 
-                          // Use context.watch to rebuild when the current track changes
-                          final audioProv = context.watch<AudioProvider>();
-                          final bool isCurrentlyPlaying =
-                              audioProv.currentEpisode?.id == episode.id;
+                            // Use context.watch to rebuild when the current track changes
+                            final audioProv = context.watch<AudioProvider>();
+                            final bool isCurrentlyPlaying =
+                                audioProv.currentEpisode?.id == episode.id;
 
-                          return _buildEpisodeItem(context, episode, isPlayed,
-                              isCurrentlyPlaying, index + 1, isDark);
-                        },
-                      ),
-          ),
-        ],
+                            return _buildEpisodeItem(
+                              context,
+                              episode,
+                              isPlayed,
+                              isCurrentlyPlaying,
+                              index + 1,
+                              isDark,
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -145,8 +160,11 @@ class SeriesDetailPage extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isCurrentlyPlaying
-            ? AppColors.primaryPurple.withValues(alpha: 0.1) // Highlight if playing
-            : (isDark ? Colors.white.withValues(alpha: 0.05) : AppColors.gray50),
+            ? AppColors.primaryPurple
+                .withValues(alpha: 0.1) // Highlight if playing
+            : (isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : AppColors.gray50),
         borderRadius: BorderRadius.circular(16),
         border: isCurrentlyPlaying
             ? Border.all(color: AppColors.primaryPurple.withValues(alpha: 0.3))
@@ -298,4 +316,3 @@ class SeriesDetailPage extends StatelessWidget {
     );
   }
 }
-

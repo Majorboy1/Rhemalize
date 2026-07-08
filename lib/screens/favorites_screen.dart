@@ -13,12 +13,14 @@ class FavoritesScreen extends StatelessWidget {
     final favoritesProvider = context.watch<FavoritesProvider>();
     final audioProvider = context.watch<AudioProvider>();
     final favoriteItems = favoritesProvider.favoriteSermons;
+    final double topInset = MediaQuery.of(context).viewPadding.top;
+    final double bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
       backgroundColor: AppColors.primaryPurple,
       body: Stack(
         children: [
-          _buildHeader(favoriteItems.length),
+          _buildHeader(favoriteItems.length, topInset),
           Padding(
             padding: const EdgeInsets.only(top: 180),
             child: Container(
@@ -32,7 +34,8 @@ class FavoritesScreen extends StatelessWidget {
               child: favoriteItems.isEmpty
                   ? const Center(child: Text('No favorites yet'))
                   : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 120),
+                      padding:
+                          EdgeInsets.fromLTRB(16, 24, 16, bottomInset + 120),
                       itemCount: favoriteItems.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
@@ -56,9 +59,9 @@ class FavoritesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(int count) {
+  Widget _buildHeader(int count, double topInset) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 80, 24, 0),
+      padding: EdgeInsets.fromLTRB(24, topInset + 48, 24, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('My Favorites',
             style: TextStyle(

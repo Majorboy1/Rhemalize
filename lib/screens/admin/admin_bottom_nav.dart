@@ -16,10 +16,11 @@ class AdminBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final double bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
     return Container(
-      height: 80,
-      padding: const EdgeInsets.only(bottom: 10),
+      height: 80 + bottomInset,
+      padding: EdgeInsets.only(bottom: bottomInset),
       decoration: BoxDecoration(
         color: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
         border: Border(

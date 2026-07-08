@@ -71,6 +71,7 @@ class _SearchScreenState extends State<SearchScreen> {
       backgroundColor:
           isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF9FAFB),
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             _buildModernHeader(isDark),
@@ -165,8 +166,10 @@ class _SearchScreenState extends State<SearchScreen> {
     FavoritesProvider favs,
     bool isDark,
   ) {
+    final double bottomInset = MediaQuery.of(context).viewPadding.bottom;
+
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      padding: EdgeInsets.fromLTRB(20, 24, 20, bottomInset + 120),
       itemCount: results.length,
       itemBuilder: (context, index) {
         final sermon = results[index];
@@ -320,8 +323,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildDefaultState(
       List<Sermon> all, AudioProvider audio, bool isDark) {
+    final double bottomInset = MediaQuery.of(context).viewPadding.bottom;
+
     return ListView(
       physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.fromLTRB(20, 24, 20, bottomInset + 120),
       children: [
         if (_searchHistory.isNotEmpty) _buildHistoryChips(isDark),
         _buildSectionTitle('Popular Searches', isDark),

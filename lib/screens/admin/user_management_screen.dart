@@ -39,8 +39,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final users =
-            snapshot.data?.docs ?? <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+        final users = snapshot.data?.docs ??
+            <QueryDocumentSnapshot<Map<String, dynamic>>>[];
         final filteredUsers = _filterUsers(users);
         final metrics = [
           _MetricData(
@@ -58,7 +58,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             icon: Icons.bolt_rounded,
           ),
           _MetricData(
-            value: users.where((doc) => _readRole(doc.data()) == 'admin').length
+            value: users
+                .where((doc) => _readRole(doc.data()) == 'admin')
+                .length
                 .toString(),
             label: 'Admins',
             background: const Color(0xFFEBF8FF),
@@ -178,8 +180,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             name: _readName(data),
                             email: _readEmail(data),
                             role: _readRole(data),
-                            lastActive:
-                                _formatTimestamp(_readTimestamp(data['lastActive'])),
+                            lastActive: _formatTimestamp(
+                                _readTimestamp(data['lastActive'])),
                             isActiveUser: _isActive(filteredUsers[index]),
                             isDark: isDark,
                           );
@@ -205,7 +207,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           if (!isDark)
-            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10),
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05), blurRadius: 10),
         ],
       ),
       child: Column(
@@ -466,4 +469,3 @@ class _MetricData {
     required this.icon,
   });
 }
-

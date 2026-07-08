@@ -55,6 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final audio = context.watch<AudioProvider>();
     final authProvider = context.watch<AuthProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
     final recentHistory = _resolveRecentHistory(
       widget.sermons,
@@ -66,93 +67,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF0F0F1E) : const Color(0xFFF8F9FE),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 120),
-        child: Column(
-          children: [
-            _buildModernHeader(authProvider.user),
-            _buildGlassStats(isDark),
-            if (showGrowth) _buildSectionHeader('Spiritual Growth'),
-            if (showGrowth) _buildStreakTile(),
-            _buildSectionHeader('Account & App'),
-            _buildEngagementCard(audio, recentHistory, isDark),
-            _buildSectionHeader(
-                widget.isAdminProfile ? 'Admin Tools' : 'Engagement'),
-            _buildActionCard(
-              widget.isAdminProfile
-                  ? [
-                      _menuItem(
-                        icon: Icons.dashboard_customize_rounded,
-                        title: 'Dashboard Overview',
-                        color: Colors.deepPurple,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const DashboardScreen()),
+      body: SafeArea(
+        bottom: true,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomInset + 120),
+          child: Column(
+            children: [
+              _buildModernHeader(authProvider.user),
+              _buildGlassStats(isDark),
+              if (showGrowth) _buildSectionHeader('Spiritual Growth'),
+              if (showGrowth) _buildStreakTile(),
+              _buildSectionHeader('Account & App'),
+              _buildEngagementCard(audio, recentHistory, isDark),
+              _buildSectionHeader(
+                  widget.isAdminProfile ? 'Admin Tools' : 'Engagement'),
+              _buildActionCard(
+                widget.isAdminProfile
+                    ? [
+                        _menuItem(
+                          icon: Icons.dashboard_customize_rounded,
+                          title: 'Dashboard Overview',
+                          color: Colors.deepPurple,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const DashboardScreen()),
+                          ),
                         ),
-                      ),
-                      _menuItem(
-                        icon: Icons.insights_rounded,
-                        title: 'Analytics & Insights',
-                        color: Colors.blueAccent,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AnalyticsScreen()),
+                        _menuItem(
+                          icon: Icons.insights_rounded,
+                          title: 'Analytics & Insights',
+                          color: Colors.blueAccent,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AnalyticsScreen()),
+                          ),
                         ),
-                      ),
-                      _menuItem(
-                        icon: Icons.tune_rounded,
-                        title: 'Admin Settings',
-                        color: Colors.purpleAccent,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SettingsScreen()),
+                        _menuItem(
+                          icon: Icons.tune_rounded,
+                          title: 'Admin Settings',
+                          color: Colors.purpleAccent,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const SettingsScreen()),
+                          ),
                         ),
-                      ),
-                      _menuItem(
-                        icon: Icons.church_rounded,
-                        title: 'Ministry Mission',
-                        color: Colors.amber,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AboutUsScreen()),
+                        _menuItem(
+                          icon: Icons.church_rounded,
+                          title: 'Ministry Mission',
+                          color: Colors.amber,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AboutUsScreen()),
+                          ),
                         ),
-                      ),
-                    ]
-                  : [
-                      _menuItem(
-                        icon: Icons.history_rounded,
-                        title: 'Listening History',
-                        color: Colors.blueAccent,
-                        onTap: () =>
-                            _showListeningHistorySheet(audio, recentHistory),
-                      ),
-                      _menuItem(
-                        icon: Icons.church_rounded,
-                        title: 'Ministry Mission',
-                        color: Colors.amber,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const AboutUsScreen()),
+                      ]
+                    : [
+                        _menuItem(
+                          icon: Icons.history_rounded,
+                          title: 'Listening History',
+                          color: Colors.blueAccent,
+                          onTap: () =>
+                              _showListeningHistorySheet(audio, recentHistory),
                         ),
-                      ),
-                      _menuItem(
-                        icon: Icons.tune_rounded,
-                        title: 'App Settings',
-                        color: Colors.purpleAccent,
-                        onTap: () => _showSettingsSheet(isDark),
-                      ),
-                    ],
-              isDark,
-            ),
-            const SizedBox(height: 32),
-            _logoutButton(),
-            _appVersion(),
-          ],
+                        _menuItem(
+                          icon: Icons.church_rounded,
+                          title: 'Ministry Mission',
+                          color: Colors.amber,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AboutUsScreen()),
+                          ),
+                        ),
+                        _menuItem(
+                          icon: Icons.tune_rounded,
+                          title: 'App Settings',
+                          color: Colors.purpleAccent,
+                          onTap: () => _showSettingsSheet(isDark),
+                        ),
+                      ],
+                isDark,
+              ),
+              const SizedBox(height: 32),
+              _logoutButton(),
+              _appVersion(),
+            ],
+          ),
         ),
       ),
     );

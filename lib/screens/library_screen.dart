@@ -23,6 +23,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final audioProvider = context.watch<AudioProvider>();
     final favoritesProvider = context.watch<FavoritesProvider>();
     final allSermons = context.watch<SermonProvider>().sermons;
+    final double bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
     final playedSermons = _resolvePlayedHistory(
       allSermons,
@@ -54,7 +55,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                  20, MediaQuery.of(context).padding.top + 70, 20, 20),
+                  20, MediaQuery.of(context).viewPadding.top + 70, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -122,8 +123,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           playedSermons.isEmpty
               ? SliverFillRemaining(child: _buildEmptyState())
               : SliverPadding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: EdgeInsets.fromLTRB(20, 10, 20, bottomInset + 10),
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {

@@ -17,9 +17,11 @@ class BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final double bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
     return Container(
-      height: 70,
+      height: 70 + bottomInset,
+      padding: EdgeInsets.only(bottom: bottomInset),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
@@ -91,4 +93,3 @@ class BottomNav extends StatelessWidget {
     );
   }
 }
-

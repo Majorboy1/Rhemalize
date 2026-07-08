@@ -85,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final seriesCount = sermons
         .where((sermon) => sermon.messageType == MessageType.series)
         .length;
+    final double bottomInset = MediaQuery.of(context).viewPadding.bottom;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F1EA),
@@ -189,18 +190,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? SliverFillRemaining(
                                 hasScrollBody: false,
                                 child: Padding(
-                                  padding: const EdgeInsets.fromLTRB(
+                                  padding: EdgeInsets.fromLTRB(
                                     18,
                                     0,
                                     18,
-                                    110,
+                                    110 + bottomInset,
                                   ),
                                   child: _buildEmptyState(),
                                 ),
                               )
                             : SliverPadding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(18, 0, 18, 110),
+                                padding: EdgeInsets.fromLTRB(
+                                    18, 0, 18, 110 + bottomInset),
                                 sliver: SliverList.separated(
                                   itemCount: filteredSermons.length,
                                   separatorBuilder: (_, __) =>

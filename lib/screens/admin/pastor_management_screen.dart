@@ -34,6 +34,7 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
 
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       isScrollControlled: true,
       backgroundColor: isDarkMode ? const Color(0xFF1E1E1E) : Colors.white,
       shape: const RoundedRectangleBorder(
@@ -62,7 +63,9 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
               Text(
                 readOnly
                     ? 'Pinned Speaker'
-                    : (isEditing ? 'Edit Speaker Details' : 'Register New Speaker'),
+                    : (isEditing
+                        ? 'Edit Speaker Details'
+                        : 'Register New Speaker'),
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -83,10 +86,8 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
                 enabled: !readOnly,
                 style:
                     TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-                decoration: _inputDecoration(
-                    'Title/Role (e.g. Senior Pastor)',
-                    Icons.work_outline,
-                    isDarkMode),
+                decoration: _inputDecoration('Title/Role (e.g. Senior Pastor)',
+                    Icons.work_outline, isDarkMode),
               ),
               const SizedBox(height: 24),
               if (readOnly)
@@ -169,7 +170,8 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
           TextStyle(color: isDarkMode ? Colors.white60 : Colors.black54),
       prefixIcon: Icon(icon, color: AppColors.primaryPurple),
       filled: true,
-      fillColor: isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
+      fillColor:
+          isDarkMode ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
     );
@@ -178,68 +180,74 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
     return Scaffold(
       backgroundColor:
           isDarkMode ? const Color(0xFF121212) : const Color(0xFFF8F9FA),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 40, bottom: 20),
-              child: Text('Speaker Directory',
-                  style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                      color:
-                          isDarkMode ? Colors.white : const Color(0xFF1A1A1A))),
-            ),
-            Expanded(
-              child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                stream: FirebaseFirestore.instance.collection('pastors').snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return _buildErrorState(isDarkMode, snapshot.error);
-                  }
-
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  final docs = [...?snapshot.data?.docs];
-                  final mergedCards = _buildPastorCards(docs);
-
-                  return GridView.builder(
-                    padding: const EdgeInsets.only(bottom: 100),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
-                      childAspectRatio: 0.82,
-                    ),
-                    itemCount: mergedCards.length + 1,
-                    itemBuilder: (context, index) {
-                      if (index == mergedCards.length) {
-                        return _addPastorCard(context, isDarkMode);
-                      }
-                      final card = mergedCards[index];
-                      return _pastorCard(
-                        context,
-                        card['id']!,
-                        card['name']!,
-                        card['role']!,
-                        isDarkMode,
-                        readOnly: card['readOnly'] == 'true',
-                      );
-                    },
-                  );
-                },
+      body: SafeArea(
+        bottom: true,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 40, bottom: 20),
+                child: Text('Speaker Directory',
+                    style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode
+                            ? Colors.white
+                            : const Color(0xFF1A1A1A))),
               ),
-            ),
-          ],
+              Expanded(
+                child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('pastors')
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return _buildErrorState(isDarkMode, snapshot.error);
+                    }
+
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final docs = [...?snapshot.data?.docs];
+                    final mergedCards = _buildPastorCards(docs);
+
+                    return GridView.builder(
+                      padding: EdgeInsets.only(bottom: bottomInset + 100),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: 0.82,
+                      ),
+                      itemCount: mergedCards.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == mergedCards.length) {
+                          return _addPastorCard(context, isDarkMode);
+                        }
+                        final card = mergedCards[index];
+                        return _pastorCard(
+                          context,
+                          card['id']!,
+                          card['name']!,
+                          card['role']!,
+                          isDarkMode,
+                          readOnly: card['readOnly'] == 'true',
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -257,9 +265,8 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
       };
     }).toList();
 
-    final existingNames = cards
-        .map((card) => _normalizeName(card['name'] ?? ''))
-        .toSet();
+    final existingNames =
+        cards.map((card) => _normalizeName(card['name'] ?? '')).toSet();
 
     for (final pinned in _defaultPinnedPastors) {
       if (!existingNames.contains(_normalizeName(pinned['name']!))) {
@@ -271,7 +278,9 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
       final priorityCompare = _sortPriority(a['name'] ?? '')
           .compareTo(_sortPriority(b['name'] ?? ''));
       if (priorityCompare != 0) return priorityCompare;
-      return (a['name'] ?? '').toLowerCase().compareTo((b['name'] ?? '').toLowerCase());
+      return (a['name'] ?? '')
+          .toLowerCase()
+          .compareTo((b['name'] ?? '').toLowerCase());
     });
 
     return cards;
@@ -345,11 +354,13 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
             borderRadius: BorderRadius.circular(24),
             border: isPinned
                 ? Border.all(
-                    color: AppColors.primaryPurple.withValues(alpha: 0.5), width: 1.5)
+                    color: AppColors.primaryPurple.withValues(alpha: 0.5),
+                    width: 1.5)
                 : null,
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
+                  color:
+                      Colors.black.withValues(alpha: isDarkMode ? 0.2 : 0.04),
                   blurRadius: 12,
                   offset: const Offset(0, 4))
             ]),
@@ -452,7 +463,8 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.add_circle_outline,
-                color: AppColors.primaryPurple.withValues(alpha: 0.5), size: 40),
+                color: AppColors.primaryPurple.withValues(alpha: 0.5),
+                size: 40),
             const SizedBox(height: 8),
             Text('Add New',
                 style: TextStyle(
@@ -464,6 +476,3 @@ class _PastorManagementScreenState extends State<PastorManagementScreen> {
     );
   }
 }
-
-
-
