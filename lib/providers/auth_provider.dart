@@ -258,6 +258,8 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> signOut({AudioProvider? audioProvider}) async {
+    AppLogger.debug(
+        'AuthProvider.signOut started (uid=${_auth.currentUser?.uid})');
     try {
       if (audioProvider != null) audioProvider.stop();
       if (!kIsWeb) {
@@ -265,14 +267,31 @@ class AuthProvider with ChangeNotifier {
             .unsubscribeFromTopic('new_sermons')
             .catchError((_) {});
       }
+    } catch (e, st) {
+      AppLogger.debug('Sign-out cleanup failed', e, st);
+    }
+
+    try {
       await _googleSignIn.signOut();
+    } catch (e, st) {
+      AppLogger.debug(
+          'Google sign-out failed, continuing with Firebase sign-out', e, st);
+    }
+
+    bool firebaseSignOutSucceeded = false;
+    try {
       await _auth.signOut();
+      firebaseSignOutSucceeded = true;
+      AppLogger.debug('FirebaseAuth sign-out succeeded');
+    } catch (e, st) {
+      AppLogger.debug('FirebaseAuth sign-out failed', e, st);
+    }
+
+    if (firebaseSignOutSucceeded) {
       _user = null;
       _userRole = null;
       _isGuest = false;
       notifyListeners();
-    } catch (e) {
-      AppLogger.debug("Sign-Out Error", e);
     }
   }
 
