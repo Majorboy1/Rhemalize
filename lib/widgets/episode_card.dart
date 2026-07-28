@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/sermon.dart';
+import '../providers/sermon_provider.dart';
 import '../utils/app_colors.dart';
 
 class EpisodeCard extends StatelessWidget {
@@ -151,7 +153,9 @@ class EpisodeCard extends StatelessWidget {
                     const Icon(Icons.schedule,
                         size: 12, color: AppColors.gray500),
                     const SizedBox(width: 4),
-                    Text(episode.duration,
+                    Text(
+                        context.select<SermonProvider, String>(
+                            (p) => p.getEpisodeDuration(episode)),
                         style: const TextStyle(
                             fontSize: 11, color: AppColors.gray500)),
                   ],
@@ -191,4 +195,3 @@ class EpisodeCard extends StatelessWidget {
     );
   }
 }
-

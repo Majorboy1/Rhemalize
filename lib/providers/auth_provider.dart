@@ -12,6 +12,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/audio_provider.dart';
 import '../utils/app_logger.dart';
+import '../utils/duration_helper.dart';
 
 class GoogleSignInConfiguration {
   const GoogleSignInConfiguration({
@@ -352,6 +353,17 @@ class AuthProvider with ChangeNotifier {
         onProgress: onProgress,
       );
 
+      // Extract real duration from the uploaded audio
+      String durationStr = '0:00';
+      try {
+        final dur = await extractDurationFromUrl(downloadUrl);
+        if (dur != null && dur.inMilliseconds > 0) {
+          durationStr = formatDuration(dur);
+        }
+      } catch (_) {
+        // Fall back to '0:00' if duration cannot be extracted
+      }
+
       await _firestore.collection('sermons').add({
         'title': title,
         'speaker': pastor,
@@ -363,6 +375,7 @@ class AuthProvider with ChangeNotifier {
         'date': FieldValue.serverTimestamp(),
         'playCount': 0,
         'uploaderId': _user?.uid,
+        'duration': durationStr,
       });
     } catch (e) {
       AppLogger.debug("Upload Error", e);
@@ -398,6 +411,17 @@ class AuthProvider with ChangeNotifier {
           },
         );
 
+        // Extract real duration from the uploaded episode audio
+        String episodeDuration = '0:00';
+        try {
+          final dur = await extractDurationFromUrl(url);
+          if (dur != null && dur.inMilliseconds > 0) {
+            episodeDuration = formatDuration(dur);
+          }
+        } catch (_) {
+          // Fall back to '0:00'
+        }
+
         uploadedEpisodes.add({
           'id': const Uuid().v4(),
           'title': ep['title'],
@@ -405,7 +429,7 @@ class AuthProvider with ChangeNotifier {
           'speaker': pastor,
           'date': DateTime.now().toIso8601String(),
           'episodeNumber': i + 1,
-          'duration': '0:00',
+          'duration': episodeDuration,
           'description': description,
           'playCount': 0,
         });

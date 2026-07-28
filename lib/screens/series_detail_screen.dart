@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../models/sermon.dart';
 import '../providers/audio_provider.dart';
+import '../providers/sermon_provider.dart';
 import '../widgets/pastor_badge.dart';
 import '../utils/app_colors.dart';
 
@@ -253,9 +254,13 @@ class SeriesDetailPage extends StatelessWidget {
                         const Icon(Icons.access_time_outlined,
                             size: 12, color: Colors.grey),
                         const SizedBox(width: 5),
-                        Text(episode.duration,
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 11)),
+                        Builder(builder: (context) {
+                          final dur = context.select<SermonProvider, String>(
+                              (p) => p.getEpisodeDuration(episode));
+                          return Text(dur,
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 11));
+                        }),
                       ],
                     ),
                   ],

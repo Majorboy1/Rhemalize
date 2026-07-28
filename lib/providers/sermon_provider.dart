@@ -9,6 +9,7 @@ import '../models/sermon.dart';
 import '../providers/audio_provider.dart';
 import '../services/storage_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/duration_helper.dart';
 
 class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
   List<Sermon> _sermons = [];
@@ -35,6 +36,8 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
       _sermons = cachedData;
       _isLoading = false;
       notifyListeners();
+      // Start resolving missing durations immediately from cached data
+      _resolveAllMissingDurations();
     }
   }
 
@@ -54,11 +57,174 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
       // Update local cache
       StorageService().saveSermons(_sermons);
       notifyListeners();
+
+      // Immediately resolve ALL missing durations in parallel
+      _resolveAllMissingDurations();
+
+      // Also trigger one-time Cloud Function backfill
+      if (!_backfillStarted && _sermons.isNotEmpty) {
+        _backfillStarted = true;
+        backfillDurations();
+      }
     }, onError: (error) {
       AppLogger.debug("Firestore Listener Error", error);
       _isLoading = false;
       notifyListeners();
     });
+  }
+
+  // ================= DURATION RESOLUTION =================
+
+  /// Cache of durations resolved from audio files.
+  /// Key = sermon/episode ID, Value = formatted duration string.
+  final Map<String, String> _durationCache = {};
+
+  bool _backfillStarted = false;
+
+  /// Returns the display duration for a [Sermon].
+  /// If stored value is "0:00", returns cached value (or "0:00" if not yet resolved).
+  String getSermonDuration(Sermon sermon) {
+    if (sermon.duration.isNotEmpty && sermon.duration != '0:00') {
+      return sermon.duration;
+    }
+    return _durationCache[sermon.id] ?? '0:00';
+  }
+
+  /// Returns the display duration for an [Episode].
+  String getEpisodeDuration(Episode episode) {
+    if (episode.duration.isNotEmpty && episode.duration != '0:00') {
+      return episode.duration;
+    }
+    return _durationCache[episode.id] ?? '0:00';
+  }
+
+  /// Resolves all missing durations immediately after sermons load.
+  /// Runs in parallel — each sermon/episode resolves independently.
+  void _resolveAllMissingDurations() {
+    for (final sermon in _sermons) {
+      if ((sermon.duration.isEmpty || sermon.duration == '0:00') &&
+          sermon.audioUrl.isNotEmpty &&
+          !_durationCache.containsKey(sermon.id)) {
+        _resolveAndCache(sermon.id, sermon.audioUrl);
+      }
+      for (final episode in sermon.episodes) {
+        if ((episode.duration.isEmpty || episode.duration == '0:00') &&
+            episode.audioUrl.isNotEmpty &&
+            !_durationCache.containsKey(episode.id)) {
+          _resolveAndCache(episode.id, episode.audioUrl);
+        }
+      }
+    }
+  }
+
+  /// Kicks off async resolution for one sermon/episode.
+  void _resolveAndCache(String id, String audioUrl) {
+    unawaited(_doResolveAndCache(id, audioUrl));
+  }
+
+  Future<void> _doResolveAndCache(String id, String audioUrl) async {
+    try {
+      final dur = await extractDurationFromUrl(audioUrl);
+      if (dur != null && dur.inMilliseconds > 0) {
+        _durationCache[id] = formatDuration(dur);
+        debugPrint('[Duration] Resolved $id → ${formatDuration(dur)}');
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('[Duration] Failed to resolve $id: $e');
+    }
+  }
+
+  /// Backfills durations for all existing sermons by extracting duration
+  /// from each audio URL. Runs in parallel per sermon/episode.
+  Future<Map<String, dynamic>> backfillDurations({
+    void Function(int, int)? onProgress,
+  }) async {
+    // Client-side extraction using platform-specific audio API
+    final Map<String, String> sermonsToFix = {};
+    final Map<String, List<Map<String, dynamic>>> episodeFixes = {};
+
+    for (final sermon in _sermons) {
+      if (sermon.duration.isEmpty || sermon.duration == '0:00') {
+        if (sermon.audioUrl.isNotEmpty) {
+          sermonsToFix[sermon.id] = sermon.audioUrl;
+        }
+      }
+      for (final episode in sermon.episodes) {
+        if (episode.duration.isEmpty || episode.duration == '0:00') {
+          if (episode.audioUrl.isNotEmpty) {
+            episodeFixes.putIfAbsent(sermon.id, () => []);
+            episodeFixes[sermon.id]!.add({
+              'id': episode.id,
+              'audioUrl': episode.audioUrl,
+            });
+          }
+        }
+      }
+    }
+
+    int total = sermonsToFix.length + episodeFixes.length;
+    int completed = 0;
+
+    for (final entry in sermonsToFix.entries) {
+      try {
+        final dur = await extractDurationFromUrl(entry.value);
+        if (dur != null && dur.inMilliseconds > 0) {
+          final durStr = formatDuration(dur);
+          _durationCache[entry.key] = durStr;
+          await FirebaseFirestore.instance
+              .collection('sermons')
+              .doc(entry.key)
+              .update({'duration': durStr});
+          notifyListeners();
+        }
+      } catch (_) {
+        AppLogger.debug("Backfill failed for ${entry.key}", _);
+      }
+      completed++;
+      onProgress?.call(completed, total);
+    }
+
+    for (final entry in episodeFixes.entries) {
+      final docRef =
+          FirebaseFirestore.instance.collection('sermons').doc(entry.key);
+      final doc = await docRef.get();
+      if (!doc.exists) continue;
+
+      final data = doc.data()!;
+      final episodes = List<Map<String, dynamic>>.from(
+        (data['episodes'] as List?)?.cast<Map<String, dynamic>>() ?? [],
+      );
+      bool changed = false;
+
+      for (final fix in entry.value) {
+        final epId = fix['id'] as String;
+        final audioUrl = fix['audioUrl'] as String;
+        final index = episodes.indexWhere((e) => e['id'] == epId);
+        if (index == -1) continue;
+
+        try {
+          final dur = await extractDurationFromUrl(audioUrl);
+          if (dur != null && dur.inMilliseconds > 0) {
+            final durStr = formatDuration(dur);
+            episodes[index]['duration'] = durStr;
+            _durationCache[epId] = durStr;
+            changed = true;
+          }
+        } catch (_) {
+          AppLogger.debug("Backfill failed for episode $epId", _);
+        }
+        completed++;
+        onProgress?.call(completed, total);
+      }
+
+      if (changed) {
+        await docRef.update({'episodes': episodes});
+        notifyListeners();
+      }
+    }
+
+    return {'fixed': completed, 'failed': total - completed};
   }
 
   Future<String> _uploadFile({
@@ -116,6 +282,19 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         );
       }
 
+      // Extract real duration from the uploaded audio
+      String durationStr = '0:00';
+      if (audioUrl.isNotEmpty) {
+        try {
+          final dur = await extractDurationFromUrl(audioUrl);
+          if (dur != null && dur.inMilliseconds > 0) {
+            durationStr = formatDuration(dur);
+          }
+        } catch (_) {
+          // Fall back to '0:00'
+        }
+      }
+
       final Map<String, dynamic> newSermonData = {
         'title': title,
         'speaker': speaker,
@@ -128,6 +307,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         'episodes': [], // Ensure this is initialized to avoid null-errors in UI
         'playCount': 0,
         'createdAt': FieldValue.serverTimestamp(),
+        'duration': durationStr,
       };
 
       final docRef = await FirebaseFirestore.instance
@@ -172,6 +352,14 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
           onProgress: onProgress,
         );
         updates['audioUrl'] = audioUrl;
+
+        // Recalculate duration for the new audio file
+        try {
+          final dur = await extractDurationFromUrl(audioUrl);
+          if (dur != null && dur.inMilliseconds > 0) {
+            updates['duration'] = formatDuration(dur);
+          }
+        } catch (_) {}
       }
 
       await FirebaseFirestore.instance
@@ -218,6 +406,14 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
             onProgress: onProgress,
           );
           episodeData['audioUrl'] = url;
+
+          // Recalculate duration for the new audio file
+          try {
+            final dur = await extractDurationFromUrl(url);
+            if (dur != null && dur.inMilliseconds > 0) {
+              episodeData['duration'] = formatDuration(dur);
+            }
+          } catch (_) {}
         }
 
         episodes[index] = episodeData;
@@ -295,6 +491,17 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
       final docRef =
           FirebaseFirestore.instance.collection('sermons').doc(seriesId);
 
+      // Extract real duration from the uploaded episode audio
+      String episodeDuration = '0:00';
+      try {
+        final dur = await extractDurationFromUrl(audioUrl);
+        if (dur != null && dur.inMilliseconds > 0) {
+          episodeDuration = formatDuration(dur);
+        }
+      } catch (_) {
+        // Fall back to '0:00'
+      }
+
       final newEpisode = {
         'id': DateTime.now().millisecondsSinceEpoch.toString(),
         'title': title,
@@ -302,7 +509,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         'description': description,
         'audioUrl': audioUrl,
         'episodeNumber': episodeNumber,
-        'duration': "0:00",
+        'duration': episodeDuration,
         'date': Timestamp.now(),
         'playCount': 0,
       };

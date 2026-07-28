@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/sermon.dart';
+import '../providers/sermon_provider.dart';
 import '../utils/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
@@ -173,7 +175,8 @@ Check out this powerful word here: $shareLink
                             size: 14, color: Colors.grey.shade500),
                         const SizedBox(width: 5),
                         Text(
-                          sermon.duration,
+                          context.select<SermonProvider, String>(
+                              (p) => p.getSermonDuration(sermon)),
                           style: TextStyle(
                               fontSize: 11, color: Colors.grey.shade600),
                         ),
@@ -309,4 +312,3 @@ Check out this powerful word here: $shareLink
     );
   }
 }
-
