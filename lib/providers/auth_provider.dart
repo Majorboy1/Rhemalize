@@ -49,12 +49,10 @@ class AuthProvider with ChangeNotifier {
   User? _user;
   String? _userRole;
   bool _isLoading = false;
-  bool _isGuest = false;
 
   User? get user => _user;
   String? get userRole => _userRole;
   bool get isLoading => _isLoading;
-  bool get isGuest => _isGuest;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   AuthProvider() {
@@ -68,7 +66,6 @@ class AuthProvider with ChangeNotifier {
     _auth.authStateChanges().listen((user) async {
       _user = user;
       if (user != null) {
-        _isGuest = false;
         _userRole ??= 'user';
         notifyListeners();
         unawaited(_updateUserStats(user));
@@ -84,13 +81,6 @@ class AuthProvider with ChangeNotifier {
       }
       notifyListeners();
     });
-  }
-
-  void continueAsGuest() {
-    _isGuest = true;
-    _user = null;
-    _userRole = 'user';
-    notifyListeners();
   }
 
   void _setLoading(bool value) {
@@ -158,7 +148,6 @@ class AuthProvider with ChangeNotifier {
   Future<UserCredential?> signInWithGoogle() async {
     try {
       _setLoading(true);
-      _isGuest = false;
 
       if (kIsWeb) {
         final provider = GoogleAuthProvider()
@@ -242,7 +231,6 @@ class AuthProvider with ChangeNotifier {
       String email, String password) async {
     try {
       _setLoading(true);
-      _isGuest = false;
       final userCredential = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       final signedInUser = userCredential.user;
@@ -291,7 +279,6 @@ class AuthProvider with ChangeNotifier {
     if (firebaseSignOutSucceeded) {
       _user = null;
       _userRole = null;
-      _isGuest = false;
       notifyListeners();
     }
   }
