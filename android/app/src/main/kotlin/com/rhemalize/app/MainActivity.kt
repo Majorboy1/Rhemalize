@@ -1,43 +1,34 @@
 package com.rhemalize.app
 
-import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.ryanheise.audioservice.AudioServiceActivity
 
 /**
- * MainActivity: configure edge-to-edge using WindowCompat and WindowInsetsControllerCompat.
- * This approach is compatible across Android 12..15 and avoids calling app-specific
- * extension helpers that may be unavailable due to activity base class differences.
+ * MainActivity.
+ *
+ * Edge-to-edge is handled by Flutter (see lib/main.dart):
+ *  - SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge) requests
+ *    edge-to-edge drawing, which the engine applies on all API levels.
+ *  - On Android 15+ (API 35) edge-to-edge is enforced by the OS by default.
+ *
+ * The legacy Window#setStatusBarColor / setNavigationBarColor /
+ * setNavigationBarDividerColor and WindowCompat.setDecorFitsSystemWindows
+ * calls are deprecated (and become no-ops on API 35+), so they are
+ * intentionally NOT used here. Transparent bars come from the theme
+ * (styles.xml) on API < 35, and from the OS on API 35+.
+ *
+ * We only configure the system-bar icon appearance with the modern,
+ * non-deprecated WindowInsetsControllerCompat so the launch screen matches
+ * the app's default light UI (dark icons). SystemChrome in Dart takes over
+ * after the first frame.
  */
 class MainActivity : AudioServiceActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Request that the window be laid out edge-to-edge. Flutter will receive
-        // accurate insets via MediaQuery/Window padding so widgets using SafeArea
-        // work properly.
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Make system bars transparent so Flutter controls the appearance.
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-
         super.onCreate(savedInstanceState)
 
-        // Configure light/dark appearances for system bar icons.
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.isAppearanceLightStatusBars = true
         controller.isAppearanceLightNavigationBars = true
-
-        // For devices with gesture/navigation bar differences, ensure the
-        // navigation bar divider color is transparent when supported.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                window.navigationBarDividerColor = Color.TRANSPARENT
-            } catch (_: Throwable) {
-                // Ignore if not supported on a particular OEM device.
-            }
-        }
     }
 }
