@@ -7,6 +7,7 @@ import '../providers/audio_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../utils/app_colors.dart';
 import '../widgets/pastor_badge.dart';
+import '../widgets/seek_slider.dart';
 
 class FullScreenPlayer extends StatelessWidget {
   final Sermon? sermon;
@@ -221,17 +222,10 @@ class FullScreenPlayer extends StatelessWidget {
                       thumbColor:
                           isDarkMode ? Colors.white : AppColors.primaryPurple,
                     ),
-                    child: Slider(
-                      value: position.inSeconds.toDouble().clamp(
-                          0,
-                          duration.inSeconds.toDouble() > 0
-                              ? duration.inSeconds.toDouble()
-                              : 1.0),
-                      max: duration.inSeconds.toDouble() > 0
-                          ? duration.inSeconds.toDouble()
-                          : 1.0,
-                      onChanged: (value) =>
-                          audioProvider.seek(Duration(seconds: value.toInt())),
+                    child: SeekSlider(
+                      position: position,
+                      duration: duration,
+                      onSeek: audioProvider.seek,
                     ),
                   ),
                   Padding(
