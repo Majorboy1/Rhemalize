@@ -65,6 +65,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
             ),
             backgroundColor: AppColors.primaryPurple,
             flexibleSpace: FlexibleSpaceBar(
+              centerTitle: false,
               stretchModes: const [
                 StretchMode.zoomBackground,
                 StretchMode.blurBackground,
@@ -123,15 +124,12 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStatRow(
-                      "6 Years", "Spreading the Word", Icons.history_edu),
-                  const SizedBox(height: 30),
                   const Text("Meet the Founder",
                       style:
                           TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   const Text(
-                    "Pastor & Mrs Bright Elliot",
+                    "Highly Esteemed Pastor Bright Elliot",
                     style: TextStyle(
                         fontSize: 18,
                         color: AppColors.primaryPurple,
@@ -139,7 +137,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                   ),
                   const SizedBox(height: 15),
                   const Text(
-                    "With a heart for the broken and a vision for the future, Pastor Bright has led Rhema house of glory Church since its inception in 2020. Alongside his wife Evang. Judith, they have dedicated their lives to teaching the uncompromised Word of God, fostering a community where everyone can experience the tangible presence of God.",
+                    "With a heart for the broken and a vision for the future, Highly Esteemed Pastor Bright has led Rhema house of glory Church since its inception in 2020. Alongside his wife Evang.Mrs Judith Bright Elliot, they have dedicated their lives to teaching the uncompromised Word of God, fostering a community where everyone can experience the tangible presence of God.",
                     style: TextStyle(
                         fontSize: 16, color: Colors.black87, height: 1.6),
                   ),
@@ -177,7 +175,7 @@ class _AboutUsScreenState extends State<AboutUsScreen> {
                   color: AppColors.primaryPurple)),
           SizedBox(height: 15),
           Text(
-            "A) is to manifest the glory of God in all nations through the power of the Holy Spirit.\n\nB) Our mission is to raise a generation of men and women that will walk with God through the Rhema Word of Life (Genesis 5:24).\n\nC) Our purpose is to make all men see the fellowship of the mystery of Christ and bring them into their place of glory and inheritance in Christ Jesus. (Ephesians 3:9–12).",
+            "A) To manifest the glory of God in all nations through the power of the Holy Spirit.\n\nB) Our mission is to raise a generation of men and women that will walk with God through the Rhema Word of Life (Genesis 5:24).\n\nC) Our purpose is to make all men see the fellowship of the mystery of Christ and bring them into their place of glory and inheritance in Christ Jesus. (Ephesians 3:9–12).",
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontSize: 18,

@@ -217,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   letterSpacing: -1.5)),
                           const SizedBox(height: 8),
                           const Text(
-                            "\"Faith comes by hearing, and hearing through the word of Christ.\"",
+                            "“So then faith cometh by hearing, and hearing by the word of God.” — Romans 10:17 (KJV)",
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             softWrap: true,
