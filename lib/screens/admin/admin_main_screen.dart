@@ -124,17 +124,18 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final audioProvider = context.watch<AudioProvider>();
-    final sermonProv = context.watch<SermonProvider>();
-    final authProv = context.watch<AuthProvider>();
+    final audioProvider = context.select<AudioProvider, AudioProvider>(
+      (provider) => provider,
+    );
+    final sermonProv = context.select<SermonProvider, SermonProvider>(
+      (provider) => provider,
+    );
+    final authProv = context.read<AuthProvider>();
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
     final bool hasActiveAudio = audioProvider.currentSermon != null ||
         audioProvider.currentEpisode != null;
-
-    if (!sermonProv.isLoading) {
-      _lastSync = DateTime.now();
-    }
+    final bool isLoading = sermonProv.isLoading;
 
     return Scaffold(
       backgroundColor:
@@ -146,14 +147,14 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(
-                    authProv.user?.displayName, isDark, sermonProv.isLoading),
+                    authProv.user?.displayName, isDark, isLoading),
 
                 // Show statistics only on the primary sermon tab
                 if (_activeTab == AdminTab.sermons)
                   _buildStatsRow(
                     sermonProv.oneTimeMessages.length,
                     sermonProv.seriesMessages.length,
-                    sermonProv.isLoading,
+                    isLoading,
                     isDark,
                   ),
 
