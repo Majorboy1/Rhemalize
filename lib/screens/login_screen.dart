@@ -80,6 +80,8 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Future<void> _handleLogin(String method) async {
+    if (_isLoading) return;
+
     setState(() => _isLoading = true);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     try {
@@ -94,6 +96,22 @@ class _LoginScreenState extends State<LoginScreen>
         userEmail = credential.user?.email?.toLowerCase();
       } else {
         userEmail = _emailController.text.trim().toLowerCase();
+        if (userEmail.isEmpty) {
+          throw 'Please enter your admin email.';
+        }
+
+        if (_showAdminForm) {
+          final adminDoc = await FirebaseFirestore.instance
+              .collection('admins')
+              .doc(userEmail)
+              .get();
+
+          if (!adminDoc.exists) {
+            _passwordController.clear();
+            throw 'Access Denied: Admin rights required.';
+          }
+        }
+
         await auth.signInWithEmailAndPassword(
             userEmail, _passwordController.text.trim());
       }
@@ -111,6 +129,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         if (!adminDoc.exists) {
           await auth.signOut();
+          _passwordController.clear();
           throw 'Access Denied: Admin rights required.';
         }
       }
@@ -241,8 +260,11 @@ class _LoginScreenState extends State<LoginScreen>
                           const SizedBox(height: 30),
                           if (!_isLoading)
                             GestureDetector(
-                              onTap: () => setState(
-                                  () => _showAdminForm = !_showAdminForm),
+                              onTap: () {
+                                if (_isLoading) return;
+                                setState(
+                                    () => _showAdminForm = !_showAdminForm);
+                              },
                               child: Text(
                                 _showAdminForm
                                     ? "Sign in as Member"
