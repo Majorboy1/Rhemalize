@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -100,18 +99,6 @@ class _LoginScreenState extends State<LoginScreen>
           throw 'Please enter your admin email.';
         }
 
-        if (_showAdminForm) {
-          final adminDoc = await FirebaseFirestore.instance
-              .collection('admins')
-              .doc(userEmail)
-              .get();
-
-          if (!adminDoc.exists) {
-            _passwordController.clear();
-            throw 'Access Denied: Admin rights required.';
-          }
-        }
-
         await auth.signInWithEmailAndPassword(
             userEmail, _passwordController.text.trim());
       }
@@ -121,13 +108,7 @@ class _LoginScreenState extends State<LoginScreen>
       }
 
       if (_showAdminForm) {
-        final adminDoc = await FirebaseFirestore.instance
-            .collection('admins')
-            .doc(userEmail)
-            .get();
-        if (!mounted) return;
-
-        if (!adminDoc.exists) {
+        if (!auth.isAdmin) {
           await auth.signOut();
           _passwordController.clear();
           throw 'Access Denied: Admin rights required.';
@@ -173,8 +154,11 @@ class _LoginScreenState extends State<LoginScreen>
                                 width: double.infinity,
                                 decoration: BoxDecoration(
                                   image: DecorationImage(
-                                    image: AssetImage(
-                                        _backgroundImages[_currentImageIndex]),
+                                    image: ResizeImage(
+                                      AssetImage(_backgroundImages[
+                                          _currentImageIndex]),
+                                      width: 1080,
+                                    ),
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -228,7 +212,7 @@ class _LoginScreenState extends State<LoginScreen>
                         children: [
                           const SizedBox(height: 10),
                           Image.asset('assets/images/rhema-logo.png',
-                              height: 70),
+                              height: 70, cacheWidth: 280),
                           const Text("RHEMAlize",
                               style: TextStyle(
                                   fontSize: 34,

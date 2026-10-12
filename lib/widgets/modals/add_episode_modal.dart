@@ -59,20 +59,36 @@ class _AddEpisodeModalState extends State<AddEpisodeModal> {
   }
 
   Future<void> _pickAudio() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-      withData: kIsWeb,
-    );
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        withData: kIsWeb,
+      );
+      if (result == null || !mounted) return;
 
-    if (result != null) {
+      final file = result.files.single;
+      if (kIsWeb) {
+        if (file.bytes == null || file.bytes!.isEmpty) {
+          throw Exception('The selected audio file could not be read.');
+        }
+      } else if (file.path == null || file.path!.isEmpty) {
+        throw Exception('The selected audio file has no readable path.');
+      }
+
       setState(() {
-        _fileName = result.files.single.name;
+        _fileName = file.name;
         if (kIsWeb) {
-          _webAudioBytes = result.files.single.bytes;
+          _webAudioBytes = file.bytes;
         } else {
-          _audioFile = File(result.files.single.path!);
+          _audioFile = File(file.path!);
+          _webAudioBytes = null;
         }
       });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not select audio: $e')),
+      );
     }
   }
 

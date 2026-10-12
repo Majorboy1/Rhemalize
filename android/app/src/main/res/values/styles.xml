@@ -16,8 +16,5 @@
         <item name="android:windowBackground">?android:colorBackground</item>
         <!-- Allow content to be displayed in display cutouts and behind system bars -->
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-        <!-- Ensure system bars are transparent by default; Flutter can override if needed -->
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 </resources>

@@ -34,6 +34,8 @@ class SermonManagementPage extends StatelessWidget {
                     sermon.imageUrl ?? '',
                     width: 50,
                     height: 50,
+                    cacheWidth: 100,
+                    cacheHeight: 100,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
                       width: 50,
@@ -54,7 +56,8 @@ class SermonManagementPage extends StatelessWidget {
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _confirmDelete(context, sermon.id, sermon.title),
+                      onPressed: () =>
+                          _confirmDelete(context, sermon.id, sermon.title),
                     ),
                   ],
                 ),

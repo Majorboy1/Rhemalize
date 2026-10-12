@@ -8,6 +8,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:audio_session/audio_session.dart';
 import '../models/sermon.dart';
+import '../models/testimony.dart';
 import '../services/audio_service.dart';
 import '../utils/app_logger.dart';
 
@@ -543,6 +544,34 @@ class AudioProvider with ChangeNotifier {
             : 1.0;
     _audioService.player.setSpeed(_speed);
     notifyListeners();
+  }
+
+  void playTestimony(Testimony testimony,
+      {bool resumeFromSavedPosition = false}) {
+    if (testimony.audioUrl.isEmpty) return;
+
+    final sermon = Sermon(
+      id: testimony.id,
+      title: testimony.title,
+      speaker: testimony.speaker,
+      date: testimony.date,
+      duration: testimony.duration,
+      category: SermonCategory.sunday,
+      messageType: MessageType.single,
+      audioUrl: testimony.audioUrl,
+      description: testimony.description,
+      imageUrl: testimony.imageUrl,
+      seriesTitle: 'Testimony',
+      playCount: testimony.playCount,
+      createdAt: testimony.createdAt,
+    );
+
+    playSermon(
+      sermon,
+      [sermon],
+      PlaybackContext.home,
+      resumeFromSavedPosition: resumeFromSavedPosition,
+    );
   }
 
   void playSermon(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/app_colors.dart';
 
-enum AdminTab { sermons, series, pastors, users, profile }
+enum AdminTab { sermons, series, testimonies, pastors, users, profile }
 
 class AdminBottomNav extends StatelessWidget {
   final AdminTab activeTab;
@@ -36,9 +36,10 @@ class AdminBottomNav extends StatelessWidget {
               isDarkMode),
           _buildTab(context, AdminTab.series, Icons.library_music_outlined,
               'Series', isDarkMode),
+          _buildTab(context, AdminTab.testimonies,
+              Icons.record_voice_over_rounded, 'Testimonies', isDarkMode),
           _buildTab(context, AdminTab.pastors, Icons.people_outline_rounded,
               'Pastors', isDarkMode),
-          // New User Management Tab
           _buildTab(context, AdminTab.users, Icons.manage_accounts_outlined,
               'Users', isDarkMode),
           _buildTab(context, AdminTab.profile,
@@ -70,8 +71,10 @@ class AdminBottomNav extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 9,
+                    fontSize: 8,
                     fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                     color: isActive ? activeColor : inactiveColor,
                   ),

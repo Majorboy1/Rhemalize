@@ -265,6 +265,8 @@ class _SeriesScreenState extends State<SeriesScreen> {
               sermon.imageUrl ?? '',
               width: 70,
               height: 70,
+              cacheWidth: 140,
+              cacheHeight: 140,
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => Container(
                 color: isDarkMode ? Colors.white10 : Colors.grey[200],
@@ -395,4 +397,3 @@ class _SeriesScreenState extends State<SeriesScreen> {
     );
   }
 }
-

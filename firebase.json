@@ -25,6 +25,9 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "hosting": {
     "site": "rhemalize-church-audio-app",
     "public": "build/web",

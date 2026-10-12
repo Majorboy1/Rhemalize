@@ -189,6 +189,8 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
                 sermon.imageUrl ?? '',
                 width: 56,
                 height: 56,
+                cacheWidth: 112,
+                cacheHeight: 112,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                   width: 56,
@@ -364,4 +366,3 @@ class _OneTimeMessagesScreenState extends State<OneTimeMessagesScreen> {
     );
   }
 }
-

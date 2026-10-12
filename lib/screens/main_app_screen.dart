@@ -8,6 +8,7 @@ import 'home_screen.dart';
 import 'search_screen.dart';
 import 'favorites_screen.dart';
 import 'library_screen.dart';
+import 'testimonies_screen.dart';
 import 'profile_screen.dart';
 import 'full_player_screen.dart';
 
@@ -106,6 +107,9 @@ class _MainAppState extends State<MainApp> {
         break;
       case BottomTab.library:
         currentScreen = const LibraryScreen();
+        break;
+      case BottomTab.testimonies:
+        currentScreen = const TestimoniesScreen();
         break;
       case BottomTab.profile:
         currentScreen = ProfileScreen(

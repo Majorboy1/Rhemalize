@@ -17,6 +17,8 @@ import 'user_management_screen.dart';
 import '../admin/admin_bottom_nav.dart';
 import '../../widgets/mini_player.dart';
 import '../../widgets/modals/add_sermon_modal.dart';
+import '../../widgets/modals/add_testimony_modal.dart';
+import '../../screens/admin/testimony_management_screen.dart';
 import '../../utils/app_colors.dart';
 
 class AdminMainScreen extends StatefulWidget {
@@ -83,11 +85,15 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
   }
 
   void _showUploadModal() {
+    final modal = _activeTab == AdminTab.testimonies
+        ? const AddTestimonyModal()
+        : const AddSermonModal();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const AddSermonModal(),
+      builder: (context) => modal,
     );
   }
 
@@ -124,12 +130,8 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final audioProvider = context.select<AudioProvider, AudioProvider>(
-      (provider) => provider,
-    );
-    final sermonProv = context.select<SermonProvider, SermonProvider>(
-      (provider) => provider,
-    );
+    final audioProvider = context.watch<AudioProvider>();
+    final sermonProv = context.watch<SermonProvider>();
     final authProv = context.read<AuthProvider>();
 
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
@@ -146,8 +148,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildHeader(
-                    authProv.user?.displayName, isDark, isLoading),
+                _buildHeader(authProv.user?.displayName, isDark, isLoading),
 
                 // Show statistics only on the primary sermon tab
                 if (_activeTab == AdminTab.sermons)
@@ -214,19 +215,20 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
       ),
 
       // Floating Action Button logic updated to include AdminTab.users check
-      floatingActionButton:
-          (_activeTab == AdminTab.sermons || _activeTab == AdminTab.series)
-              ? Padding(
-                  padding: EdgeInsets.only(bottom: hasActiveAudio ? 85.0 : 0.0),
-                  child: FloatingActionButton(
-                    onPressed: _showUploadModal,
-                    backgroundColor: AppColors.primaryPurple,
-                    elevation: 6,
-                    child: const Icon(Icons.add_rounded,
-                        color: Colors.white, size: 32),
-                  ),
-                )
-              : null,
+      floatingActionButton: (_activeTab == AdminTab.sermons ||
+              _activeTab == AdminTab.series ||
+              _activeTab == AdminTab.testimonies)
+          ? Padding(
+              padding: EdgeInsets.only(bottom: hasActiveAudio ? 85.0 : 0.0),
+              child: FloatingActionButton(
+                onPressed: _showUploadModal,
+                backgroundColor: AppColors.primaryPurple,
+                elevation: 6,
+                child: const Icon(Icons.add_rounded,
+                    color: Colors.white, size: 32),
+              ),
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
@@ -238,6 +240,8 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
         return const OneTimeMessagesScreen();
       case AdminTab.series:
         return const SeriesScreen();
+      case AdminTab.testimonies:
+        return const TestimonyManagementScreen();
       case AdminTab.pastors:
         return const PastorManagementScreen();
       case AdminTab.users:
@@ -313,8 +317,7 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     );
   }
 
-  Widget _buildStatsRow(
-      int singles, int series, bool isLoading, bool isDark) {
+  Widget _buildStatsRow(int singles, int series, bool isLoading, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
@@ -324,7 +327,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
           const SizedBox(width: 12),
           _statCard("Series", series.toString(), Icons.layers_rounded,
               Colors.blueAccent, isLoading),
-
         ],
       ),
     );
@@ -364,11 +366,3 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     );
   }
 }
-
-
-
-
-
-
-
-

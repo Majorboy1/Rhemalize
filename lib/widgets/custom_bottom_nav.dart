@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../utils/app_colors.dart';
 
 // Expanded enum for User Experience
-enum BottomTab { home, search, favorites, library, profile }
+enum BottomTab { home, search, favorites, library, testimonies, profile }
 
 class BottomNav extends StatelessWidget {
   final BottomTab activeTab;
@@ -40,6 +40,8 @@ class BottomNav extends StatelessWidget {
               'Favorite', isDarkMode),
           _buildTab(context, BottomTab.library, Icons.my_library_music_outlined,
               'Library', isDarkMode),
+          _buildTab(context, BottomTab.testimonies,
+              Icons.record_voice_over_rounded, 'Testimonies', isDarkMode),
           _buildTab(context, BottomTab.profile, Icons.person_outline_rounded,
               'Profile', isDarkMode),
         ],
@@ -67,8 +69,10 @@ class BottomNav extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 10, // Slightly smaller to fit 5 items
+                    fontSize: 8.5,
                     fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                     color: isActive ? activeColor : inactiveColor,
                   ),

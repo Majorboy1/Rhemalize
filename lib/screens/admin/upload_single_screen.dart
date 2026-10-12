@@ -30,22 +30,39 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
   double _uploadProgress = 0.0; // Added for progress tracking
 
   Future<void> _pickFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-      withData: true,
-    );
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        withData: kIsWeb,
+      );
+      if (result == null || !mounted) return;
 
-    if (result != null) {
-      setState(() {
-        _selectedFileName = result.files.single.name;
-        if (kIsWeb) {
-          _webAudioBytes = result.files.single.bytes;
-          _audioFile = null;
-        } else {
-          _audioFile = File(result.files.single.path!);
-          _webAudioBytes = null;
+      final file = result.files.single;
+      if (kIsWeb) {
+        if (file.bytes == null || file.bytes!.isEmpty) {
+          throw Exception('The selected audio file could not be read.');
         }
-      });
+        setState(() {
+          _selectedFileName = file.name;
+          _webAudioBytes = file.bytes;
+          _audioFile = null;
+        });
+      } else {
+        final path = file.path;
+        if (path == null || path.isEmpty) {
+          throw Exception('The selected audio file has no readable path.');
+        }
+        setState(() {
+          _selectedFileName = file.name;
+          _audioFile = File(path);
+          _webAudioBytes = null;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not select audio: $e')),
+      );
     }
   }
 
@@ -74,7 +91,7 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
                 _imageController.text.isEmpty ? "" : _imageController.text,
             category: _selectedCategory,
             onProgress: (progress) {
-              setState(() => _uploadProgress = progress);
+              if (mounted) setState(() => _uploadProgress = progress);
             },
           );
 
@@ -156,7 +173,8 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
                   child: CircularProgressIndicator(
                     value: _uploadProgress,
                     strokeWidth: 8,
-                    backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1),
+                    backgroundColor:
+                        AppColors.primaryPurple.withValues(alpha: 0.1),
                     color: AppColors.primaryPurple,
                   ),
                 ),
@@ -224,8 +242,9 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-            color:
-                hasFile ? Colors.green.withValues(alpha: 0.05) : Colors.transparent,
+            color: hasFile
+                ? Colors.green.withValues(alpha: 0.05)
+                : Colors.transparent,
             border: Border.all(
               color: hasFile
                   ? Colors.green
@@ -273,4 +292,3 @@ class _UploadSingleScreenState extends State<UploadSingleScreen> {
     );
   }
 }
-

@@ -120,7 +120,7 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
           episodes: episodesData,
           category: _selectedCategory.name,
           onProgress: (progress) {
-            setState(() => _uploadProgress = progress);
+            if (mounted) setState(() => _uploadProgress = progress);
           },
         );
       } else {
@@ -157,26 +157,37 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
   }
 
   Future<void> _pickAudioForEpisode(int index) async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-      allowMultiple: false,
-      withData: true,
-    );
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        allowMultiple: false,
+        withData: kIsWeb,
+      );
+      if (result == null || !mounted) return;
 
-    if (result != null) {
+      final platformFile = result.files.single;
+      if (kIsWeb) {
+        if (platformFile.bytes == null || platformFile.bytes!.isEmpty) {
+          throw Exception('The selected audio file could not be read.');
+        }
+      } else if (platformFile.path == null || platformFile.path!.isEmpty) {
+        throw Exception('The selected audio file has no readable path.');
+      }
+
       setState(() {
-        final platformFile = result.files.single;
         _episodeDrafts[index].fileName = platformFile.name;
-
         if (kIsWeb) {
           _episodeDrafts[index].webAudioBytes = platformFile.bytes;
         } else {
-          if (platformFile.path != null) {
-            _episodeDrafts[index].audioFile = File(platformFile.path!);
-          }
-          _episodeDrafts[index].webAudioBytes = platformFile.bytes;
+          _episodeDrafts[index].audioFile = File(platformFile.path!);
+          _episodeDrafts[index].webAudioBytes = null;
         }
       });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not select audio: $e')),
+      );
     }
   }
 
@@ -332,7 +343,8 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
                   value: _uploadProgress,
                   strokeWidth: 8,
                   color: AppColors.primaryPurple,
-                  backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.2),
+                  backgroundColor:
+                      AppColors.primaryPurple.withValues(alpha: 0.2),
                 ),
               ),
               Text(
@@ -471,7 +483,8 @@ class _UploadSeriesScreenState extends State<UploadSeriesScreen> {
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: AppColors.primaryPurple.withValues(alpha: 0.1),
+                  backgroundColor:
+                      AppColors.primaryPurple.withValues(alpha: 0.1),
                   child: Text(
                     '${index + 1}',
                     style: const TextStyle(
@@ -585,4 +598,3 @@ class EpisodeDraft {
     titleController.dispose();
   }
 }
-

@@ -15,6 +15,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
   List<Sermon> _sermons = [];
   bool _isLoading = true;
   StreamSubscription<QuerySnapshot>? _sermonSubscription;
+  Timer? _initialLoadTimer;
 
   List<Sermon> get sermons => _sermons;
   bool get isLoading => _isLoading;
@@ -26,18 +27,28 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
       _sermons.where((s) => s.messageType == MessageType.series).toList();
 
   SermonProvider() {
+    _initialLoadTimer = Timer(const Duration(seconds: 12), () {
+      if (_isLoading) {
+        _isLoading = false;
+        notifyListeners();
+      }
+    });
     _loadCachedSermons();
     _listenToSermons();
   }
 
   Future<void> _loadCachedSermons() async {
-    final cachedData = await StorageService().getSavedSermons();
-    if (cachedData.isNotEmpty) {
-      _sermons = cachedData;
-      _isLoading = false;
-      notifyListeners();
-      // Start resolving missing durations immediately from cached data
-      _resolveAllMissingDurations();
+    try {
+      final cachedData = await StorageService().getSavedSermons();
+      if (cachedData.isNotEmpty) {
+        _sermons = cachedData;
+        _isLoading = false;
+        _initialLoadTimer?.cancel();
+        notifyListeners();
+        _resolveAllMissingDurations();
+      }
+    } catch (error) {
+      AppLogger.debug("Cached sermons load failed", error);
     }
   }
 
@@ -48,27 +59,38 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         .orderBy('date', descending: true)
         .snapshots()
         .listen((snapshot) {
-      _sermons = snapshot.docs.map((doc) {
-        // Safe mapping using our updated fromFirestore model logic
-        return Sermon.fromFirestore(doc.data(), doc.id);
-      }).toList();
-      _isLoading = false;
+      try {
+        final parsedSermons = <Sermon>[];
+        for (final doc in snapshot.docs) {
+          try {
+            parsedSermons.add(Sermon.fromFirestore(doc.data(), doc.id));
+          } catch (error) {
+            AppLogger.debug('Skipping malformed sermon ${doc.id}', error);
+          }
+        }
+        _sermons = parsedSermons;
 
-      // Update local cache
-      StorageService().saveSermons(_sermons);
-      notifyListeners();
+        // Update local cache
+        unawaited(StorageService().saveSermons(_sermons));
+        notifyListeners();
 
-      // Immediately resolve ALL missing durations in parallel
-      _resolveAllMissingDurations();
+        // Immediately resolve ALL missing durations in parallel
+        _resolveAllMissingDurations();
 
-      // Also trigger one-time Cloud Function backfill
-      if (!_backfillStarted && _sermons.isNotEmpty) {
-        _backfillStarted = true;
-        backfillDurations();
+        // Also trigger one-time Cloud Function backfill
+        if (!_backfillStarted && _sermons.isNotEmpty) {
+          _backfillStarted = true;
+          unawaited(backfillDurations());
+        }
+      } finally {
+        _isLoading = false;
+        _initialLoadTimer?.cancel();
+        notifyListeners();
       }
     }, onError: (error) {
       AppLogger.debug("Firestore Listener Error", error);
       _isLoading = false;
+      _initialLoadTimer?.cancel();
       notifyListeners();
     });
   }
@@ -578,6 +600,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
 
   @override
   void dispose() {
+    _initialLoadTimer?.cancel();
     _sermonSubscription?.cancel();
     super.dispose();
   }

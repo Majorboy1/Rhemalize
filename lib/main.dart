@@ -17,6 +17,7 @@ import 'screens/login_screen.dart';
 import 'screens/admin/admin_main_screen.dart' as admin_screen;
 import 'providers/auth_provider.dart';
 import 'providers/sermon_provider.dart';
+import 'providers/testimony_provider.dart';
 import 'providers/audio_provider.dart';
 import 'providers/favorites_provider.dart';
 import 'providers/theme_provider.dart';
@@ -168,6 +169,7 @@ class RhemalizeApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => SermonProvider()),
+        ChangeNotifierProvider(create: (_) => TestimonyProvider()),
         ChangeNotifierProxyProvider<SermonProvider, AudioProvider>(
           create: (_) => AudioProvider(),
           update: (_, sermonProv, audioProv) {

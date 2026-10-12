@@ -66,7 +66,7 @@ class AuthProvider with ChangeNotifier {
     _auth.authStateChanges().listen((user) async {
       _user = user;
       if (user != null) {
-        _userRole ??= 'user';
+        _userRole = null;
         notifyListeners();
         unawaited(_updateUserStats(user));
         if (!kIsWeb) {
@@ -78,8 +78,8 @@ class AuthProvider with ChangeNotifier {
         }
       } else {
         _userRole = null;
+        notifyListeners();
       }
-      notifyListeners();
     });
   }
 
@@ -90,7 +90,6 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _updateUserStats(User user) async {
     try {
-      _userRole ??= 'user';
       final userDoc = _firestore.collection('users').doc(user.uid);
       final docSnapshot = await userDoc.get().timeout(
             const Duration(seconds: 8),
@@ -140,10 +139,14 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       AppLogger.debug("Error updating user stats", e);
+      // Keep a role already resolved by the sign-in flow if profile syncing
+      // fails after authentication succeeds.
       _userRole ??= 'user';
       notifyListeners();
     }
   }
+
+  bool get isAdmin => _userRole == 'admin';
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
@@ -182,7 +185,7 @@ class AuthProvider with ChangeNotifier {
 
       if (signedInUser != null) {
         _user = signedInUser;
-        _userRole ??= 'user';
+        _userRole = null;
         notifyListeners();
 
         final googlePhotoUrl = googleUser.photoUrl;
@@ -236,6 +239,8 @@ class AuthProvider with ChangeNotifier {
       final signedInUser = userCredential.user;
       if (signedInUser != null) {
         _user = signedInUser;
+        _userRole = null;
+        notifyListeners();
         await _updateUserStats(signedInUser);
       }
       return userCredential;

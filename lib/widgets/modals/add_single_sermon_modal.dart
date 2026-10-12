@@ -69,22 +69,39 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
   }
 
   Future<void> _pickAudio() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-      withData: true,
-    );
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        withData: kIsWeb,
+      );
+      if (result == null || !mounted) return;
 
-    if (result != null) {
-      setState(() {
-        _selectedFileName = result.files.single.name;
-        if (kIsWeb) {
-          _webAudioBytes = result.files.single.bytes;
-          _selectedAudioFile = null;
-        } else {
-          _selectedAudioFile = File(result.files.single.path!);
-          _webAudioBytes = null;
+      final file = result.files.single;
+      if (kIsWeb) {
+        if (file.bytes == null || file.bytes!.isEmpty) {
+          throw Exception('The selected audio file could not be read.');
         }
-      });
+        setState(() {
+          _selectedFileName = file.name;
+          _webAudioBytes = file.bytes;
+          _selectedAudioFile = null;
+        });
+      } else {
+        final path = file.path;
+        if (path == null || path.isEmpty) {
+          throw Exception('The selected audio file has no readable path.');
+        }
+        setState(() {
+          _selectedFileName = file.name;
+          _selectedAudioFile = File(path);
+          _webAudioBytes = null;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not select audio: $e')),
+      );
     }
   }
 
@@ -209,8 +226,9 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
           hintText: hint,
           prefixIcon: Icon(icon, color: AppColors.primaryPurple, size: 20),
           filled: true,
-          fillColor:
-              isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F8FA),
+          fillColor: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : const Color(0xFFF7F8FA),
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
               borderSide: BorderSide.none),
@@ -228,8 +246,9 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
       decoration: InputDecoration(
         labelText: label,
         filled: true,
-        fillColor:
-            isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F8FA),
+        fillColor: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : const Color(0xFFF7F8FA),
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(15),
             borderSide: BorderSide.none),
@@ -361,4 +380,3 @@ class _AddSingleSermonModalState extends State<AddSingleSermonModal> {
     );
   }
 }
-
