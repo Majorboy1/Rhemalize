@@ -299,7 +299,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         audioUrl = await _uploadFile(
           file: audioFile,
           bytes: webAudioBytes,
-          path: 'audio/${DateTime.now().millisecondsSinceEpoch}.mp3',
+          path: 'sermons/audio/${DateTime.now().millisecondsSinceEpoch}.mp3',
           onProgress: onProgress,
         );
       }
@@ -370,7 +370,7 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
         String audioUrl = await _uploadFile(
           file: newAudioFile,
           bytes: newWebAudioBytes,
-          path: 'audio/${DateTime.now().millisecondsSinceEpoch}.mp3',
+          path: 'sermons/audio/${DateTime.now().millisecondsSinceEpoch}.mp3',
           onProgress: onProgress,
         );
         updates['audioUrl'] = audioUrl;
@@ -424,7 +424,8 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
           String url = await _uploadFile(
             file: newAudioFile,
             bytes: newWebAudioBytes,
-            path: 'audio/episodes/${DateTime.now().millisecondsSinceEpoch}.mp3',
+            path:
+                'sermons/audio/episodes/${DateTime.now().millisecondsSinceEpoch}.mp3',
             onProgress: onProgress,
           );
           episodeData['audioUrl'] = url;
@@ -506,7 +507,8 @@ class SermonProvider with ChangeNotifier implements PlaybackDataDelegate {
       String audioUrl = await _uploadFile(
         file: audioFile,
         bytes: webAudioBytes,
-        path: 'audio/episodes/${DateTime.now().millisecondsSinceEpoch}.mp3',
+        path:
+            'sermons/audio/episodes/${DateTime.now().millisecondsSinceEpoch}.mp3',
         onProgress: onProgress,
       );
 

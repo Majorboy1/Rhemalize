@@ -34,7 +34,7 @@ android {
         applicationId = "com.rhemalize.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
-        versionCode = 31
+        versionCode = 32
         versionName = "1.2.2"
         multiDexEnabled = true
     }
